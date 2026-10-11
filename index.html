@@ -1,0 +1,1917 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Hue Goes There: free palette and gradient generator</title>
+<meta name="description" content="Generate color palettes and gradients, explore an endless supply of palettes, and export everything. Free, no account, nothing locked.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='11' height='32' fill='%231d4e89'/%3E%3Crect x='11' width='10' height='32' fill='%23f2b705'/%3E%3Crect x='21' width='11' height='32' fill='%23d92b1e'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* The chrome is neutral grey on purpose: any tint in the interface
+   would change how the colors you are judging look. */
+:root {
+  --bg: #f2f2f1;
+  --surface: #ffffff;
+  --ink: #171717;
+  --muted: #666663;
+  --line: #dadad7;
+  --hover: rgba(0, 0, 0, .06);
+  --font-ui: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-d: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+  --top: 56px;
+  --pal: linear-gradient(90deg, #888, #888);
+}
+:root[data-theme="dark"] {
+  --bg: #151515;
+  --surface: #1f1f1f;
+  --ink: #f1f1ef;
+  --muted: #9c9c98;
+  --line: #333331;
+  --hover: rgba(255, 255, 255, .09);
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.45 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---------- header ---------- */
+.top {
+  position: sticky; top: 0; z-index: 20;
+  height: var(--top);
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 16px 0 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+.brand-strip { display: flex; width: 30px; height: 22px; border-radius: 4px; overflow: hidden; }
+.brand-strip i { flex: 1; }
+.brand-name { font: 650 21px/1 var(--font-d); letter-spacing: -.02em; }
+.tabs { display: flex; gap: 2px; height: 100%; margin-left: 4px; overflow-x: auto; scrollbar-width: none; }
+.tabs a {
+  position: relative; display: flex; align-items: center; gap: 6px;
+  padding: 0 12px; color: var(--muted); text-decoration: none; font-weight: 500; white-space: nowrap;
+}
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); }
+/* The active tab is underlined with the palette you are working on. */
+.tabs a[aria-current="page"]::after {
+  content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px;
+  background: var(--pal); border-radius: 2px 2px 0 0;
+}
+.count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.top .ibtn { margin-left: auto; }
+
+/* ---------- shared controls ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 36px; padding: 0 13px;
+  border: 1px solid var(--line); border-radius: 9px;
+  background: var(--surface); color: var(--ink); font-weight: 500; white-space: nowrap; text-decoration: none;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.primary:hover { opacity: .88; }
+.btn:disabled, .ibtn:disabled { opacity: .35; cursor: default; }
+.btn kbd { font: 500 11px/1 var(--font-ui); padding: 3px 5px; border-radius: 4px; background: color-mix(in srgb, currentColor 18%, transparent); }
+.ibtn {
+  width: 36px; height: 36px; flex: none;
+  display: grid; place-items: center;
+  border: 0; border-radius: 9px; background: transparent; color: inherit;
+}
+.ibtn:hover:not(:disabled) { background: color-mix(in srgb, currentColor 13%, transparent); }
+.ibtn[aria-pressed="true"] svg { fill: currentColor; }
+.field { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; white-space: nowrap; }
+select, .text-in {
+  height: 36px; padding: 0 10px;
+  border: 1px solid var(--line); border-radius: 9px;
+  background: var(--surface); color: var(--ink);
+}
+.text-in { font-variant-numeric: tabular-nums; }
+input[type="color"] { width: 36px; height: 36px; padding: 2px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); cursor: pointer; flex: none; }
+input[type="range"] { accent-color: var(--ink); }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); height: 36px; }
+.stepper button { width: 32px; height: 34px; border: 0; background: none; font-size: 18px; line-height: 1; border-radius: 8px; }
+.stepper button:hover:not(:disabled) { background: var(--hover); }
+.stepper button:disabled { opacity: .3; cursor: default; }
+.stepper output { min-width: 22px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.spacer { flex: 1; }
+
+/* ---------- generator ---------- */
+#view-generate { display: flex; flex-direction: column; height: calc(100dvh - var(--top)); }
+/* Options scroll sideways when space runs out; Save and Export never hide. */
+.toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); flex: none; }
+.tb-opts { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
+.tb-opts::-webkit-scrollbar { display: none; }
+.tb-opts > * { flex: none; }
+.tb-end { display: flex; align-items: center; gap: 6px; flex: none; }
+#modeSel { width: 150px; }
+#simSel { width: 148px; }
+#cols { flex: 1; display: flex; min-height: 0; }
+.col {
+  position: relative; flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 20px 6px 44px;
+}
+.col.dragging { z-index: 4; box-shadow: 0 0 0 3px rgba(255,255,255,.7), 0 12px 40px rgba(0,0,0,.35); }
+.col-tools { display: flex; flex-direction: column; gap: 4px; margin: auto 0; }
+.col-tools .ibtn { opacity: 0; transition: opacity .12s; }
+.col:hover .col-tools .ibtn, .col:focus-within .col-tools .ibtn, .col.locked .lock-btn { opacity: 1; }
+.col-tools .ibtn:disabled { opacity: 0; }
+.col:hover .col-tools .ibtn:disabled { opacity: .3; }
+.grip { cursor: grab; touch-action: none; }
+.col-info { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: 100%; }
+.hex {
+  border: 0; background: none; padding: 6px 10px; border-radius: 9px;
+  font: 600 clamp(17px, 2.1vw, 30px)/1 var(--font-d); letter-spacing: .01em; font-variant-numeric: tabular-nums;
+}
+.hex:hover { background: color-mix(in srgb, currentColor 13%, transparent); }
+.cname { margin-top: 4px; font-size: 13px; opacity: .78; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.col-edge { position: absolute; right: -22px; top: 0; bottom: 0; width: 44px; z-index: 3; display: grid; place-items: center; }
+.col-edge button {
+  width: 38px; height: 38px; border-radius: 50%; border: 0;
+  background: #fff; color: #171717; display: grid; place-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  opacity: 0; transform: scale(.7); transition: opacity .12s, transform .12s;
+}
+.col-edge:hover button, .col-edge button:focus-visible { opacity: 1; transform: none; }
+#cols.is-dragging .col-edge { display: none; }
+.shades { position: absolute; inset: 0; display: flex; flex-direction: column; z-index: 2; }
+.shades button { flex: 1; border: 0; min-height: 0; font: 600 12px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
+.shades button span { opacity: 0; }
+.shades button:hover span, .shades button:focus-visible span, .shades button.cur span { opacity: 1; }
+.shades button.cur { box-shadow: inset 0 0 0 2px currentColor; }
+
+/* ---------- pages ---------- */
+.page { max-width: 1320px; margin: 0 auto; padding: 32px 20px 96px; }
+.page h1 { font: 650 clamp(30px, 4.6vw, 52px)/1.02 var(--font-d); letter-spacing: -.03em; margin: 0 0 10px; }
+.page h2 { font: 650 22px/1.1 var(--font-d); letter-spacing: -.02em; margin: 44px 0 16px; }
+.lede { color: var(--muted); max-width: 62ch; margin: 0 0 24px; font-size: 16px; }
+.search-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.search-row .text-in { flex: 1 1 280px; height: 44px; font-size: 16px; padding: 0 14px; }
+.search-row select { height: 44px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 32px; padding: 0 12px; border-radius: 16px;
+  border: 1px solid var(--line); background: var(--surface); font-size: 14px;
+}
+.chip:hover { border-color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(128,128,128,.5); }
+.chip.plain { border-style: dashed; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 28px 20px; margin-top: 26px; }
+.strip { display: flex; height: 128px; border-radius: 12px; overflow: hidden; }
+.seg { flex: 1 1 0; min-width: 0; border: 0; padding: 0 0 10px; display: flex; align-items: flex-end; justify-content: center; transition: flex-grow .16s; }
+.seg span { font: 600 12px/1 var(--font-ui); font-variant-numeric: tabular-nums; opacity: 0; }
+.seg:hover, .seg:focus-visible { flex-grow: 2.4; outline-offset: -3px; }
+.seg:hover span, .seg:focus-visible span { opacity: 1; }
+.tile { height: 128px; border-radius: 12px; border: 0; width: 100%; display: block; }
+.card-meta { display: flex; align-items: center; gap: 2px; padding: 8px 0 0 2px; }
+.card-text { flex: 1; min-width: 0; }
+.card-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-sub { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.name-in { width: 100%; height: 30px; padding: 0 6px; margin-left: -6px; border: 1px solid transparent; border-radius: 7px; background: transparent; font-weight: 600; }
+.name-in:hover, .name-in:focus { border-color: var(--line); background: var(--surface); }
+.note { color: var(--muted); padding: 28px 0; max-width: 60ch; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ---------- gradient ---------- */
+.grad-layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; }
+.grad-preview { position: sticky; top: var(--top); height: calc(100dvh - var(--top)); }
+.grad-panel { padding: 22px 20px 60px; border-left: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.grad-panel h1 { font: 650 28px/1.05 var(--font-d); letter-spacing: -.025em; margin: 0; }
+.grad-panel h2 { font: 600 15px/1.2 var(--font-ui); margin: 0 0 8px; }
+.seg-ctl { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; padding: 2px; background: var(--bg); }
+.seg-ctl button { height: 30px; padding: 0 13px; border: 0; border-radius: 7px; background: none; font-weight: 500; }
+.seg-ctl button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.angle { display: flex; align-items: center; gap: 10px; }
+.angle input[type="range"] { flex: 1; min-width: 0; }
+.angle .text-in { width: 68px; }
+.bar-wrap { padding: 0 11px; }
+.bar { position: relative; height: 40px; border-radius: 9px; cursor: copy; box-shadow: inset 0 0 0 1px rgba(128,128,128,.35); touch-action: none; }
+.handle {
+  position: absolute; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px;
+  border-radius: 50%; border: 3px solid #fff; padding: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.35);
+  cursor: grab; touch-action: none;
+}
+.handle.sel { width: 28px; height: 28px; margin: -14px 0 0 -14px; z-index: 2; }
+.stops { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.stop-row { display: flex; align-items: center; gap: 6px; padding: 3px; border-radius: 11px; }
+.stop-row.sel { background: var(--bg); }
+.stop-row .hex-in { flex: 1; min-width: 0; }
+.stop-row .pos-in { width: 66px; }
+.stop-row .unit { color: var(--muted); }
+pre.code {
+  margin: 0; padding: 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line);
+  font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  white-space: pre-wrap; word-break: break-word; max-height: 46vh; overflow: auto; user-select: all;
+}
+.presets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 10px; }
+.presets button { border: 0; padding: 0; background: none; text-align: left; font-size: 13px; font-weight: 500; border-radius: 10px; }
+.presets button i { display: block; height: 56px; border-radius: 10px; margin-bottom: 5px; }
+.presets button:hover i { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+
+/* ---------- dialog ---------- */
+dialog {
+  border: 0; padding: 0; border-radius: 16px;
+  background: var(--surface); color: var(--ink);
+  width: min(600px, calc(100vw - 24px)); max-height: calc(100dvh - 40px);
+  box-shadow: 0 24px 80px rgba(0,0,0,.35);
+}
+dialog.wide { width: min(900px, calc(100vw - 24px)); }
+dialog::backdrop { background: rgba(0,0,0,.45); }
+.dlg-head { display: flex; align-items: center; padding: 14px 12px 6px 22px; }
+.dlg-head h2 { flex: 1; margin: 0; font: 650 22px/1.1 var(--font-d); letter-spacing: -.02em; }
+.dlg-body { padding: 10px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
+.dlg-body p { margin: 0; color: var(--muted); }
+.edit-top { display: flex; gap: 10px; align-items: stretch; }
+.edit-swatch { flex: 1; min-height: 76px; border-radius: 11px; display: flex; align-items: flex-end; padding: 10px 12px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(128,128,128,.3); }
+.edit-top .side { display: flex; flex-direction: column; gap: 6px; width: 130px; }
+.edit-top input[type="color"] { width: 100%; }
+.edit-top .text-in { width: 100%; text-transform: uppercase; }
+.slider { display: grid; grid-template-columns: 92px 1fr 44px; align-items: center; gap: 10px; }
+.slider span { color: var(--muted); }
+.slider output { text-align: right; font-variant-numeric: tabular-nums; }
+.slider input { width: 100%; min-width: 0; }
+.readout { margin: 0; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 12px; align-items: center; }
+.readout dt { color: var(--muted); }
+.readout dd { margin: 0; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scroll-x { overflow-x: auto; }
+table.contrast { border-collapse: separate; border-spacing: 4px; }
+table.contrast th { font: 600 12px/1 var(--font-ui); font-variant-numeric: tabular-nums; padding: 4px; color: var(--muted); text-align: center; }
+table.contrast th i { display: block; width: 100%; height: 14px; border-radius: 4px; margin-bottom: 4px; box-shadow: inset 0 0 0 1px rgba(128,128,128,.4); }
+table.contrast td { min-width: 76px; height: 62px; border-radius: 8px; text-align: center; padding: 6px 4px; line-height: 1.15; }
+table.contrast td b { display: block; font: 600 19px/1.1 var(--font-d); }
+table.contrast td small { font-size: 11px; font-variant-numeric: tabular-nums; }
+table.contrast td.fail { opacity: .32; }
+table.contrast td.self { background: none; }
+
+#toast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 100;
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 500;
+  transition: opacity .15s, transform .15s; max-width: calc(100vw - 32px); text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- small screens ---------- */
+@media (hover: none) {
+  .col-tools .ibtn { opacity: 1; }
+  .col-tools .ibtn:disabled { opacity: .3; }
+  .col-edge { display: none; }
+  .seg span { opacity: .9; }
+}
+@media (max-width: 760px) {
+  .top { gap: 4px; padding: 0 4px 0 12px; }
+  .brand-name { display: none; }
+  .tabs a { padding: 0 7px; font-size: 14px; }
+  .tabs a[aria-current="page"]::after { left: 7px; right: 7px; }
+  .toolbar { flex-wrap: wrap; padding: 8px 10px; }
+  .tb-end { margin-left: auto; }
+  .tb-opts { order: 3; flex-basis: 100%; }
+  .btn kbd { display: none; }
+  #cols { flex-direction: column; }
+  .col { flex-direction: row; justify-content: space-between; padding: 0 6px 0 10px; }
+  .col-tools { flex-direction: row; gap: 0; margin: 0; order: 2; }
+  .col-info { align-items: flex-start; order: 1; }
+  .hex { font-size: 18px; padding: 4px 6px; }
+  .cname { display: none; }
+  .col-edge { display: none; }
+  .shades { flex-direction: row; }
+  .grad-layout { grid-template-columns: 1fr; }
+  .grad-preview { position: static; height: 38vh; }
+  .grad-panel { border-left: 0; border-top: 1px solid var(--line); }
+  .slider { grid-template-columns: 78px 1fr 40px; }
+}
+@media (max-width: 420px) {
+  .col-tools .ibtn { width: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#/generate" aria-label="Hue Goes There home">
+    <span class="brand-strip" id="brandStrip" aria-hidden="true"></span>
+    <span class="brand-name">Hue Goes There</span>
+  </a>
+  <nav class="tabs" aria-label="Sections">
+    <a href="#/generate" data-tab="generate">Palettes</a>
+    <a href="#/gradient" data-tab="gradient">Gradients</a>
+    <a href="#/explore" data-tab="explore">Explore</a>
+    <a href="#/saved" data-tab="saved">Saved <span class="count" id="savedCount"></span></a>
+  </nav>
+  <button class="ibtn" id="themeBtn" type="button" aria-label="Switch between light and dark"></button>
+</header>
+
+<main>
+  <!-- Palette generator -->
+  <section id="view-generate" class="view" aria-label="Palette generator">
+    <div class="toolbar" role="toolbar" aria-label="Palette tools">
+      <button class="btn primary" id="genBtn" type="button">Generate <kbd>Space</kbd></button>
+      <div class="tb-opts">
+        <select id="modeSel" aria-label="Color harmony" title="Color harmony">
+          <option value="auto">Any harmony</option>
+          <option value="analogous">Analogous</option>
+          <option value="mono">Monochrome</option>
+          <option value="complementary">Complementary</option>
+          <option value="split">Split complementary</option>
+          <option value="triadic">Triadic</option>
+          <option value="square">Square</option>
+        </select>
+        <select id="toneSel" aria-label="Mood" title="Mood">
+          <option value="any">Any mood</option>
+          <option value="pastel">Pastel</option>
+          <option value="vivid">Vivid</option>
+          <option value="muted">Muted</option>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+        <div class="stepper" role="group" aria-label="Number of colors">
+          <button type="button" id="lessBtn" aria-label="Remove a color">&minus;</button>
+          <output id="countOut">5</output>
+          <button type="button" id="moreBtn" aria-label="Add a color">+</button>
+        </div>
+        <select id="simSel" aria-label="Preview for color blindness" title="Preview how the palette looks with color blindness">
+          <option value="none">Normal vision</option>
+          <option value="protanopia">Protanopia (no red)</option>
+          <option value="deuteranopia">Deuteranopia (no green)</option>
+          <option value="tritanopia">Tritanopia (no blue)</option>
+          <option value="achromatopsia">Greyscale</option>
+        </select>
+        <button class="btn" id="adjustBtn" type="button">Adjust</button>
+        <button class="btn" id="contrastBtn" type="button">Contrast</button>
+        <button class="btn" id="imageBtn" type="button">From image</button>
+        <input type="file" id="imageIn" accept="image/*" hidden>
+      </div>
+      <div class="tb-end">
+        <button class="ibtn" id="undoBtn" type="button" aria-label="Undo" title="Undo"></button>
+        <button class="ibtn" id="redoBtn" type="button" aria-label="Redo" title="Redo"></button>
+        <button class="btn" id="saveBtn" type="button">Save</button>
+        <button class="btn" id="exportBtn" type="button">Export</button>
+      </div>
+    </div>
+    <div id="cols"></div>
+  </section>
+
+  <!-- Gradient maker -->
+  <section id="view-gradient" class="view" hidden aria-label="Gradient maker">
+    <div class="grad-layout">
+      <div class="grad-preview" id="gradPreview" role="img" aria-label="Gradient preview"></div>
+      <div class="grad-panel">
+        <h1>Gradient maker</h1>
+        <div class="row">
+          <button class="btn primary" id="gRandom" type="button">Random <kbd>Space</kbd></button>
+          <button class="btn" id="gFromPal" type="button">Use my palette</button>
+          <button class="btn" id="gSave" type="button">Save</button>
+        </div>
+        <div>
+          <h2>Shape</h2>
+          <div class="seg-ctl" id="gType" role="group" aria-label="Gradient shape">
+            <button type="button" data-v="linear">Linear</button>
+            <button type="button" data-v="radial">Radial</button>
+            <button type="button" data-v="conic">Conic</button>
+          </div>
+        </div>
+        <div>
+          <h2 id="gAngleLabel">Angle</h2>
+          <div class="angle">
+            <input type="range" id="gAngle" min="0" max="360" step="1" aria-labelledby="gAngleLabel">
+            <input type="number" class="text-in" id="gAngleNum" min="0" max="360" aria-labelledby="gAngleLabel">
+          </div>
+        </div>
+        <div>
+          <h2>Colors</h2>
+          <div class="bar-wrap"><div class="bar" id="gBar" title="Click to add a color"></div></div>
+          <div class="stops" id="gStops"></div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="gAdd" type="button">Add color</button>
+            <button class="btn" id="gReverse" type="button">Reverse</button>
+            <button class="btn" id="gEven" type="button">Space evenly</button>
+          </div>
+        </div>
+        <label class="field" style="justify-content:space-between">Mix colors in
+          <select id="gSpace">
+            <option value="oklab">OKLab, smooth and even</option>
+            <option value="oklch">OKLCH, keeps colors vivid</option>
+            <option value="srgb">sRGB, the classic look</option>
+            <option value="hsl">HSL, around the color wheel</option>
+          </select>
+        </label>
+        <div>
+          <h2>CSS</h2>
+          <pre class="code" id="gCode"></pre>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="gCopy" type="button">Copy CSS</button>
+            <button class="btn" id="gPng" type="button">Download PNG</button>
+            <button class="btn" id="gLink" type="button">Copy link</button>
+          </div>
+        </div>
+        <div>
+          <h2>Turn it into a palette</h2>
+          <div class="row">
+            <div class="stepper" role="group" aria-label="Number of steps">
+              <button type="button" id="gStepLess" aria-label="Fewer steps">&minus;</button>
+              <output id="gStepOut">5</output>
+              <button type="button" id="gStepMore" aria-label="More steps">+</button>
+            </div>
+            <button class="btn" id="gToPal" type="button">Open as palette</button>
+          </div>
+        </div>
+        <div>
+          <h2>Start from one of these</h2>
+          <div class="presets" id="gPresets"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Explorer -->
+  <section id="view-explore" class="view" hidden aria-label="Palette explorer">
+    <div class="page">
+      <h1>Explore palettes</h1>
+      <p class="lede" id="exploreLede"></p>
+      <div class="search-row">
+        <input class="text-in" id="exQ" type="search" placeholder="Search a word or a hex code, like sunset or #2a9d8f" aria-label="Search palettes" autocomplete="off" spellcheck="false">
+        <select id="exSize" aria-label="Number of colors">
+          <option value="0">Any size</option>
+          <option value="3">3 colors</option><option value="4">4 colors</option><option value="5">5 colors</option>
+          <option value="6">6 colors</option><option value="7">7 colors</option><option value="8">8 colors</option>
+        </select>
+      </div>
+      <div class="chips" id="exFams" role="group" aria-label="Filter by color"></div>
+      <div class="chips" id="exStyles" role="group" aria-label="Filter by style"></div>
+      <div class="grid" id="exGrid"></div>
+      <p class="note" id="exNote" hidden></p>
+      <div id="exSentinel"></div>
+    </div>
+  </section>
+
+  <!-- Saved -->
+  <section id="view-saved" class="view" hidden aria-label="Saved palettes and gradients">
+    <div class="page">
+      <h1>Saved</h1>
+      <p class="lede">Save as many palettes and gradients as you like. They are kept in this browser only, so download a backup if you want them somewhere else.</p>
+      <div class="row">
+        <button class="btn" id="backupBtn" type="button">Download backup</button>
+        <button class="btn" id="restoreBtn" type="button">Restore backup</button>
+        <input type="file" id="restoreIn" accept="application/json,.json" hidden>
+      </div>
+      <div id="savedBody"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <div class="dlg-head">
+    <h2 id="dlgTitle"></h2>
+    <button class="ibtn" id="dlgClose" type="button" aria-label="Close"></button>
+  </div>
+  <div class="dlg-body" id="dlgBody"></div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px">Hue Goes There needs JavaScript to generate colors.</p></noscript>
+
+<script>
+'use strict';
+/* =====================================================================
+   Hue Goes There. One file, no build step, no server. Everything below runs
+   in the browser, so it works as-is on GitHub Pages.
+   Sections: helpers, color math, names, generator, gradient, explorer,
+   saved, routing.
+   ===================================================================== */
+
+// ---------- helpers ----------
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+
+// Tiny element builder. Strings become text nodes, never HTML, so names
+// coming from links or imported files cannot inject markup.
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'html') e.innerHTML = v;
+    else if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else if (k === 'value') e.value = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    e.append(kid.nodeType ? kid : document.createTextNode(kid));
+  }
+  return e;
+}
+
+const ICON = {
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.6-1.8"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  grip: '<path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/>',
+  shades: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9.3h16M4 14.7h16"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+  redo: '<path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>',
+  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  gradient: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14M15 5v14"/>',
+};
+const ic = n => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
+const ibtn = (name, label, onclick, cls = '') =>
+  h('button', { class: 'ibtn ' + cls, type: 'button', 'aria-label': label, title: label, html: ic(name), onclick });
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+async function copy(text, msg) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = h('textarea', { value: text, style: 'position:fixed;opacity:0' });
+    document.body.append(ta); ta.select();
+    try { document.execCommand('copy'); } catch {}
+    ta.remove();
+  }
+  toast(msg || `Copied ${text}`);
+}
+function download(blob, name) {
+  const a = h('a', { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashStr(s) {
+  let x = 2166136261;
+  for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); }
+  return x >>> 0;
+}
+
+// ---------- storage ----------
+const KEY = 'huegoesthere.v1';
+const DB = { palettes: [], gradients: [], theme: null };
+try {
+  const raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+  if (Array.isArray(raw.palettes)) DB.palettes = raw.palettes;
+  if (Array.isArray(raw.gradients)) DB.gradients = raw.gradients;
+  if (raw.theme === 'dark' || raw.theme === 'light') DB.theme = raw.theme;
+} catch {}
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch {} };
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+// ---------- color math ----------
+const isHex = s => /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(s).trim());
+function normHex(s) {
+  s = String(s).trim().replace(/^#/, '').toLowerCase();
+  if (s.length === 3) s = [...s].map(c => c + c).join('');
+  return '#' + s;
+}
+const hex2rgb = hex => { const n = parseInt(hex.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const rgb2hex = rgb => '#' + rgb.map(v => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('');
+const toLin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+const fromLin = c => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+
+function lin2oklab([r, g, b]) {
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+  ];
+}
+function oklab2lin([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  ];
+}
+const labCache = new Map();
+function hex2oklab(hex) {
+  let v = labCache.get(hex);
+  if (!v) { v = lin2oklab(hex2rgb(hex).map(toLin)); labCache.set(hex, v); }
+  return v;
+}
+const oklab2hex = lab => rgb2hex(oklab2lin(lab).map(v => fromLin(clamp(v))));
+function hex2oklch(hex) {
+  const [L, a, b] = hex2oklab(hex);
+  let H = Math.atan2(b, a) * 180 / Math.PI;
+  if (H < 0) H += 360;
+  return [L, Math.hypot(a, b), H];
+}
+// OKLCH to hex. If the color is outside what a screen can show, chroma is
+// reduced until it fits, which keeps the lightness and hue you asked for.
+function oklch2hex(L, C, H) {
+  L = clamp(L);
+  const hr = H * Math.PI / 180, ca = Math.cos(hr), sa = Math.sin(hr);
+  const fits = c => oklab2lin([L, c * ca, c * sa]).every(v => v >= -0.0008 && v <= 1.0008);
+  if (!fits(C)) {
+    let lo = 0, hi = C;
+    for (let i = 0; i < 18; i++) { const mid = (lo + hi) / 2; fits(mid) ? lo = mid : hi = mid; }
+    C = lo;
+  }
+  return oklab2hex([L, C * ca, C * sa]);
+}
+function rgb2hsl([r, g, b]) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let hh = 0;
+  if (d) {
+    if (mx === r) hh = ((g - b) / d) % 6;
+    else if (mx === g) hh = (b - r) / d + 2;
+    else hh = (r - g) / d + 4;
+    hh *= 60; if (hh < 0) hh += 360;
+  }
+  return [hh, Math.min(1, s), l];
+}
+function hsl2rgb([hh, s, l]) {
+  hh = ((hh % 360) + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((hh / 60) % 2 - 1)), m = l - c / 2;
+  const [r, g, b] = hh < 60 ? [c, x, 0] : hh < 120 ? [x, c, 0] : hh < 180 ? [0, c, x] : hh < 240 ? [0, x, c] : hh < 300 ? [x, 0, c] : [c, 0, x];
+  return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+}
+const hex2hsl = hex => rgb2hsl(hex2rgb(hex));
+const luminance = hex => { const [r, g, b] = hex2rgb(hex).map(toLin); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+function contrast(a, b) {
+  const la = luminance(a), lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+const textOn = hex => contrast(hex, '#ffffff') >= contrast(hex, '#141414') * 0.85 ? '#ffffff' : '#141414';
+function dist(a, b) {
+  const x = hex2oklab(a), y = hex2oklab(b);
+  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+}
+const lerp = (a, b, t) => a + (b - a) * t;
+function lerpHue(a, b, t) {
+  let d = ((b - a) % 360 + 540) % 360 - 180;
+  return ((a + d * t) % 360 + 360) % 360;
+}
+function mix(a, b, t, space = 'oklab') {
+  if (space === 'srgb') { const x = hex2rgb(a), y = hex2rgb(b); return rgb2hex(x.map((v, i) => lerp(v, y[i], t))); }
+  if (space === 'hsl') {
+    const x = hex2hsl(a), y = hex2hsl(b);
+    const hx = x[1] < 0.003 ? y[0] : x[0], hy = y[1] < 0.003 ? x[0] : y[0];
+    return rgb2hex(hsl2rgb([lerpHue(hx, hy, t), lerp(x[1], y[1], t), lerp(x[2], y[2], t)]));
+  }
+  if (space === 'oklch') {
+    const x = hex2oklch(a), y = hex2oklch(b);
+    const hx = x[1] < 0.004 ? y[2] : x[2], hy = y[1] < 0.004 ? x[2] : y[2];
+    return oklch2hex(lerp(x[0], y[0], t), lerp(x[1], y[1], t), lerpHue(hx, hy, t));
+  }
+  const x = hex2oklab(a), y = hex2oklab(b);
+  return oklab2hex(x.map((v, i) => lerp(v, y[i], t)));
+}
+
+// Color vision simulation (Machado, Oliveira and Fernandes, 2009).
+const CVD = {
+  protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+  deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+  tritanopia: [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.303900]],
+};
+function simulate(hex, mode) {
+  if (!mode || mode === 'none') return hex;
+  const lin = hex2rgb(hex).map(toLin);
+  if (mode === 'achromatopsia') {
+    const y = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+    return rgb2hex([y, y, y].map(fromLin));
+  }
+  const m = CVD[mode];
+  return rgb2hex(m.map(row => fromLin(clamp(row[0] * lin[0] + row[1] * lin[1] + row[2] * lin[2]))));
+}
+
+// ---------- color names ----------
+const NAMES = ('Alice Blue f0f8ff,Antique White faebd7,Aqua 00ffff,Aquamarine 7fffd4,Azure f0ffff,Beige f5f5dc,Bisque ffe4c4,Black 000000,' +
+'Blanched Almond ffebcd,Blue 0000ff,Blue Violet 8a2be2,Brown a52a2a,Burlywood deb887,Cadet Blue 5f9ea0,Chartreuse 7fff00,Chocolate d2691e,' +
+'Coral ff7f50,Cornflower Blue 6495ed,Cornsilk fff8dc,Crimson dc143c,Dark Blue 00008b,Dark Cyan 008b8b,Dark Goldenrod b8860b,Dark Gray a9a9a9,' +
+'Dark Green 006400,Dark Khaki bdb76b,Dark Magenta 8b008b,Dark Olive Green 556b2f,Dark Orange ff8c00,Dark Orchid 9932cc,Dark Red 8b0000,' +
+'Dark Salmon e9967a,Dark Sea Green 8fbc8f,Dark Slate Blue 483d8b,Dark Slate Gray 2f4f4f,Dark Turquoise 00ced1,Dark Violet 9400d3,' +
+'Deep Pink ff1493,Deep Sky Blue 00bfff,Dim Gray 696969,Dodger Blue 1e90ff,Firebrick b22222,Floral White fffaf0,Forest Green 228b22,' +
+'Fuchsia ff00ff,Gainsboro dcdcdc,Ghost White f8f8ff,Gold ffd700,Goldenrod daa520,Gray 808080,Green 008000,Green Yellow adff2f,Honeydew f0fff0,' +
+'Hot Pink ff69b4,Indian Red cd5c5c,Indigo 4b0082,Ivory fffff0,Khaki f0e68c,Lavender e6e6fa,Lavender Blush fff0f5,Lawn Green 7cfc00,' +
+'Lemon Chiffon fffacd,Light Blue add8e6,Light Coral f08080,Light Cyan e0ffff,Light Goldenrod fafad2,Light Gray d3d3d3,Light Green 90ee90,' +
+'Light Pink ffb6c1,Light Salmon ffa07a,Light Sea Green 20b2aa,Light Sky Blue 87cefa,Light Slate Gray 778899,Light Steel Blue b0c4de,' +
+'Light Yellow ffffe0,Lime 00ff00,Lime Green 32cd32,Linen faf0e6,Maroon 800000,Medium Aquamarine 66cdaa,Medium Blue 0000cd,' +
+'Medium Orchid ba55d3,Medium Purple 9370db,Medium Sea Green 3cb371,Medium Slate Blue 7b68ee,Medium Spring Green 00fa9a,' +
+'Medium Turquoise 48d1cc,Medium Violet Red c71585,Midnight Blue 191970,Mint Cream f5fffa,Misty Rose ffe4e1,Moccasin ffe4b5,' +
+'Navajo White ffdead,Navy 000080,Old Lace fdf5e6,Olive 808000,Olive Drab 6b8e23,Orange ffa500,Orange Red ff4500,Orchid da70d6,' +
+'Pale Goldenrod eee8aa,Pale Green 98fb98,Pale Turquoise afeeee,Pale Violet Red db7093,Papaya Whip ffefd5,Peach Puff ffdab9,Peru cd853f,' +
+'Pink ffc0cb,Plum dda0dd,Powder Blue b0e0e6,Purple 800080,Rebecca Purple 663399,Red ff0000,Rosy Brown bc8f8f,Royal Blue 4169e1,' +
+'Saddle Brown 8b4513,Salmon fa8072,Sandy Brown f4a460,Sea Green 2e8b57,Seashell fff5ee,Sienna a0522d,Silver c0c0c0,Sky Blue 87ceeb,' +
+'Slate Blue 6a5acd,Slate Gray 708090,Snow fffafa,Spring Green 00ff7f,Steel Blue 4682b4,Tan d2b48c,Teal 008080,Thistle d8bfd8,Tomato ff6347,' +
+'Turquoise 40e0d0,Violet ee82ee,Wheat f5deb3,White ffffff,White Smoke f5f5f5,Yellow ffff00,Yellow Green 9acd32,' +
+'Charcoal 36454f,Jet 343434,Gunmetal 2a3439,Eerie Black 1b1b1b,Eggplant 614051,Mauve e0b0ff,Periwinkle ccccff,Cerulean 007ba7,Cobalt 0047ab,' +
+'Sapphire 0f52ba,Emerald 50c878,Jade 00a86b,Mint 3eb489,Sage b2ac88,Moss 8a9a5b,Mustard ffdb58,Amber ffbf00,Ochre cc7722,Rust b7410e,' +
+'Terracotta e2725b,Burgundy 800020,Wine 722f37,Raspberry e30b5d,Blush de5d83,Peach ffe5b4,Apricot fbceb1,Sand c2b280,Taupe 483c32,' +
+'Cream fffdd0,Denim 1560bd,Lilac c8a2c8,Amethyst 9966cc,Seafoam 9fe2bf,Pine 01796f,Coffee 6f4e37,Espresso 4b3621,Bronze cd7f32,Copper b87333,' +
+'Brass b5a642,Ash b2beb5,Ultramarine 120a8f,Flamingo fc8eac,Bubblegum ffc1cc,Rose ff007f,Scarlet ff2400,Vermilion e34234,Tangerine f28500,' +
+'Pumpkin ff7518,Canary ffef00,Lemon fff44f,Pistachio 93c572,Fern 4f7942,Bone e3dac9,Eggshell f0ead6,Champagne f7e7ce,Almond efdecd,' +
+'Camel c19a6b,Chestnut 954535,Mahogany c04000,Walnut 773f1a,Umber 635147,Sepia 704214')
+  .split(',').map(s => { const i = s.lastIndexOf(' '); return { name: s.slice(0, i), lab: hex2oklab('#' + s.slice(i + 1)) }; });
+const nameCache = new Map();
+function nameOf(hex) {
+  let n = nameCache.get(hex);
+  if (n) return n;
+  const [L, a, b] = hex2oklab(hex);
+  let best = Infinity;
+  for (const c of NAMES) {
+    const d = (L - c.lab[0]) ** 2 + (a - c.lab[1]) ** 2 + (b - c.lab[2]) ** 2;
+    if (d < best) { best = d; n = c.name; }
+  }
+  nameCache.set(hex, n);
+  return n;
+}
+
+// ---------- palette generation ----------
+// Works in OKLCH: pick hues from a harmony rule, spread lightness across a
+// range set by the mood, and vary chroma around a shared base.
+const TONES = {
+  full: r => ({ lo: 0.2 + r() * 0.2, hi: 0.82 + r() * 0.15, c: 0.05 + r() * 0.15, neutrals: true }),
+  pastel: r => ({ lo: 0.84 + r() * 0.04, hi: 0.93 + r() * 0.04, c: 0.045 + r() * 0.055 }),
+  vivid: r => ({ lo: 0.45 + r() * 0.1, hi: 0.82 + r() * 0.1, c: 0.18 + r() * 0.1 }),
+  muted: r => ({ lo: 0.3 + r() * 0.15, hi: 0.8 + r() * 0.12, c: 0.02 + r() * 0.035, neutrals: true }),
+  dark: r => ({ lo: 0.13 + r() * 0.07, hi: 0.4 + r() * 0.16, c: 0.04 + r() * 0.1, neutrals: true }),
+  light: r => ({ lo: 0.74 + r() * 0.07, hi: 0.95 + r() * 0.03, c: 0.03 + r() * 0.1 }),
+};
+function genPalette(n, mode, rnd = Math.random, fixed = null, tone = 'any') {
+  if (!TONES[tone]) {
+    const r = rnd();
+    tone = r < 0.58 ? 'full' : r < 0.67 ? 'pastel' : r < 0.76 ? 'vivid' : r < 0.84 ? 'muted' : r < 0.93 ? 'dark' : 'light';
+  }
+  if (mode === 'auto') {
+    const bag = ['analogous', 'analogous', 'analogous', 'mono', 'complementary', 'complementary', 'split', 'triadic', 'triadic', 'square'];
+    mode = bag[Math.floor(rnd() * bag.length)];
+  }
+  let h0 = rnd() * 360;
+  const anchor = (fixed || []).find(Boolean);
+  if (anchor) { const [, C, H] = hex2oklch(anchor); if (C > 0.03) h0 = H; }
+
+  let offsets;
+  if (mode === 'analogous') {
+    const step = 14 + rnd() * 24;
+    offsets = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * step);
+  } else {
+    const pool = { mono: [0], complementary: [0, 180], split: [0, 150, 210], triadic: [0, 120, 240], square: [0, 90, 180, 270] }[mode] || [0];
+    offsets = Array.from({ length: n }, (_, i) => pool[i % pool.length]).sort((a, b) => a - b)
+      .map(o => o + (rnd() - 0.5) * (mode === 'mono' ? 10 : 16));
+  }
+
+  const { lo, hi, c: baseC, neutrals } = TONES[tone](rnd);
+  let Ls = Array.from({ length: n }, (_, i) => (n === 1 ? (lo + hi) / 2 : lo + (hi - lo) * i / (n - 1)) + (rnd() - 0.5) * 0.06);
+  if (rnd() < 0.5) Ls.reverse();
+  if (rnd() < 0.3) for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [Ls[i], Ls[j]] = [Ls[j], Ls[i]]; }
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const L = Ls[i];
+    let C = baseC * (0.6 + rnd() * 0.8);
+    if (neutrals && (L < 0.3 || L > 0.9) && rnd() < 0.55) C *= 0.3; // a near-neutral dark or light anchors most good palettes
+    const hue = (h0 + offsets[i] + 720) % 360;
+    out.push(fixed && fixed[i] ? fixed[i] : oklch2hex(L, C, hue));
+  }
+  return out;
+}
+
+// ---------- palette tags and names (used by the explorer and by Save) ----------
+function family(hex) {
+  const [hh, s, l] = hex2hsl(hex);
+  const C = hex2oklch(hex)[1];
+  if (l < 0.11) return 'black';
+  if (C < 0.022 || s < 0.08) return l > 0.93 ? 'white' : l < 0.17 ? 'black' : 'grey';
+  if (l > 0.965) return 'white';
+  if (hh >= 8 && hh < 50 && (l < 0.4 || (s < 0.5 && l < 0.62))) return 'brown';
+  if (hh < 15 || hh >= 345) return 'red';
+  if (hh < 45) return 'orange';
+  if (hh < 70) return 'yellow';
+  if (hh < 165) return 'green';
+  if (hh < 195) return 'teal';
+  if (hh < 255) return 'blue';
+  if (hh < 290) return 'purple';
+  return 'pink';
+}
+const tagCache = new Map();
+function tagsOf(colors) {
+  const key = colors.join('');
+  let t = tagCache.get(key);
+  if (t) return t;
+  const fams = new Set(), styles = new Set(), tally = {};
+  let sumL = 0, sumC = 0, minL = 1, maxL = 0, warm = 0, cool = 0, nDark = 0, nLight = 0, nPastel = 0, nVivid = 0;
+  const hues = [];
+  for (const hex of colors) {
+    const f = family(hex); fams.add(f);
+    const [L, C] = hex2oklch(hex), hh = hex2hsl(hex)[0];
+    sumL += L; sumC += C; minL = Math.min(minL, L); maxL = Math.max(maxL, L);
+    if (L < 0.45) nDark++;
+    if (L > 0.8) nLight++;
+    if (L > 0.8 && C > 0.02 && C < 0.13) nPastel++;
+    if (C > 0.13) nVivid++;
+    if (C > 0.035) {
+      hues.push(hh);
+      tally[f] = (tally[f] || 0) + C; // weight by chroma so the vivid color names the palette
+      if (hh < 75 || hh >= 320) warm++; else if (hh >= 150 && hh < 285) cool++;
+    }
+  }
+  const n = colors.length, avgC = sumC / n, most = k => k >= Math.ceil(n * 0.6);
+  if (hues.length && warm / hues.length >= 0.6) styles.add('warm');
+  if (hues.length && cool / hues.length >= 0.6) styles.add('cool');
+  if (most(nPastel)) styles.add('pastel');
+  if (most(nVivid) || avgC > 0.14) styles.add('vivid');
+  if (avgC < 0.065) styles.add('muted');
+  if (most(nDark)) styles.add('dark');
+  if (most(nLight)) styles.add('light');
+  if (maxL - minL > 0.66) styles.add('high contrast');
+  let spread = 0;
+  for (const a of hues) for (const b of hues) spread = Math.max(spread, Math.abs(((a - b) % 360 + 540) % 360 - 180));
+  if (spread <= 28) styles.add('monochrome');
+  if ((fams.has('brown') || fams.has('green')) && avgC < 0.1 && !styles.has('cool')) styles.add('earthy');
+  const dom = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0] || [...fams][0] || 'grey';
+  t = { fams, styles, dom };
+  tagCache.set(key, t);
+  return t;
+}
+const ADJ = {
+  pastel: ['Soft', 'Powder', 'Milky', 'Hushed'], vivid: ['Loud', 'Electric', 'Bright', 'Bold'],
+  dark: ['Late', 'Midnight', 'Deep', 'Shadow'], muted: ['Dusty', 'Faded', 'Quiet', 'Worn'],
+  light: ['Pale', 'Morning', 'Airy', 'Chalky'], warm: ['Warm', 'Sunlit', 'Toasted', 'Golden'],
+  cool: ['Cool', 'Still', 'Crisp', 'Rainy'], plain: ['Open', 'Plain', 'Easy', 'Sunday'],
+};
+const NOUN = {
+  red: ['Poppy', 'Brick', 'Cherry', 'Lantern'], orange: ['Apricot', 'Ember', 'Clay', 'Marmalade'],
+  yellow: ['Lemon', 'Straw', 'Honey', 'Canary'], green: ['Fern', 'Meadow', 'Moss', 'Orchard'],
+  teal: ['Lagoon', 'Spruce', 'Tide', 'Jade'], blue: ['Harbor', 'Denim', 'Glacier', 'Dusk'],
+  purple: ['Violet', 'Plum', 'Iris', 'Thistle'], pink: ['Peony', 'Blush', 'Flamingo', 'Sorbet'],
+  brown: ['Walnut', 'Cocoa', 'Saddle', 'Cedar'], grey: ['Pebble', 'Slate', 'Fog', 'Ash'],
+  black: ['Coal', 'Ink', 'Soot', 'Night'], white: ['Chalk', 'Linen', 'Paper', 'Salt'],
+};
+function autoName(colors) {
+  const rnd = mulberry32(hashStr(colors.join('')));
+  const t = tagsOf(colors);
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const st = ['pastel', 'vivid', 'dark', 'muted', 'light', 'warm', 'cool'].find(s => t.styles.has(s));
+  return pick(ADJ[st] || ADJ.plain) + ' ' + pick(NOUN[t.dom] || NOUN.grey);
+}
+
+// ---------- hand-picked palettes ----------
+const CURATED = `Kelp Forest|0f2e2a 1f5c4d 4f9d7a b9d9a8 f3efd9
+Night Market|14121f 3b1f5b c2376b f28f3b ffd9a0
+Clay Studio|3d2c29 8c4a3c c9795d e6b89c f4e6d8
+Glacier Line|0d1b2a 2b4f73 6fa3c7 c5dfee f7fbfd
+Citrus Stand|2f4b26 7fa33a f2d03b f58a1f e4472b
+Lavender Field|2c2145 5a4a9c 9a8bd6 d2c8f2 f6f2fc
+Rain Jacket|1c2a33 5d7a89 e8eef1 f2c230 d94f30
+Peach Sorbet|ffe8d6 ffc9a8 ff9f8a f2707a 8c3a5a
+Moss and Stone|2b2f2a 55604a 8d9675 c7c5ad ebe7dc
+Arcade Carpet|0f0b2e 3a1d9e e0218a 00cfc1 f8f25c
+Desert Hour|2a1a2e 7d3c4f d9735a f2b880 f9e4c1
+Paper and Ink|121212 3a3a3a 8a8a86 d9d7d0 f7f5ef
+Tomato Vine|23402b 4f7f3a a8c66c f6f1dd e2452f
+Deep Dive|03071e 0a2a5e 1466a8 2bb3c0 b8f2e6
+Rosewater|4a1f2f 9c4563 d98ba2 f3c6d1 fdf1f3
+Terminal Green|0b0f0c 12261a 1f5c3a 39d98a d6ffe7
+School Bus|1b1b1b 4d4d4d f7c600 ffe680 fff9db
+Plum Jam|1e0f24 4b1d52 8b2f7a d46a9f f7c9d9
+Mint Chip|5a3e36 1f2d2b 3b6b5e 7fc8a9 d5f2e3
+Autumn Trail|3b1f14 8a3b12 d0661f e8a23d f3dfa2
+Coral Reef|05396b 0a7ea4 5ed0c0 ffd6b0 ff6f59
+Greyhound|1f2428 4b5560 8a96a3 c9d1d9 f3f5f7
+Bougainvillea|1f4d3a 6aa84f f7f3e3 e83f8c 8e1e6b
+Campfire|10131a 2c3148 8b95ab f47c0c ffd470
+Butter Pastel|fff4c2 ffd9b5 f9c2d1 cdb8f0 b5dcf5
+Sea Glass|e8f6f1 b9e3d6 7fc7c0 4a9aa6 2c5d73
+Espresso Bar|1b120e 3e2a20 71503b b58d6a efe2d3
+Neon Tetra|08090c 1b2cc1 00e5ff ff2e63 fdfdfd
+Wildflower|2f5d3a f4c64f f47d52 b8457a 5a3090
+Blueprint|0a2a66 1552b0 4f8df5 dce9ff ffffff
+Persimmon|2d1e2f 6b2d3e c6432f f08a3c f9d9a6
+Olive Grove|2a2d16 5b6327 9aa13d d9d49a f7f3df
+Storm Front|0f1a24 23394d 4d6a82 9fb3c4 e8c15a
+Candy Shop|ff5d8f ffa5c0 fff0a8 9be7e0 6c7bff
+Pine Cabin|1a2a22 2f4a3a 7a5a3c c8a070 f2e6d0
+Ultraviolet|12002e 3c0a78 7a1fd6 b96dff ecd9ff
+Salt Flat|f8f4f0 e6ddd4 c9bfb5 9a918a 5c5653
+Mango Lassi|fff3d1 ffd36b ffa73c f0672f 8a2f1c
+Aurora|061826 114b5f 1fc8a0 8ef0cf 7b4bd1
+Brick Lane|2b1b17 6e2c23 b4452f d98b6a f0dccb
+Lemonade|fffbe0 fff07a ffd23f b8e06a 5fb86b
+Twilight Bus|1a1b3a 3d3b8e 7d6fd0 f2a5c0 ffe0b5
+Rice Terrace|20331f 3f6b35 7dab4f c8dc8a f4f7dc
+Denim Day|101d33 1e3a66 3f68a8 8fb0dc e8eef7
+Flamingo Pool|0a6c74 30b7b0 c9f2e9 ffc2d1 ff5c8a
+Charcoal Rose|1c1c1e 3b3b40 8d8d94 d9698a f7d4dd
+Honeycomb|2a1d05 7a4f0a d6940f f5c443 fdf0bf
+Polar Night|0a0f1e 14213d 23395d 6c8fb5 e5e9f0
+Watermelon|1f5c3a 8fd18f f9f5e3 ff8fa3 e63950
+Thrift Store|5a3e52 c26d5c e5b85c 6f9a8d 2f4858
+Bauhaus|121212 f2f0e6 d92b1e f2b705 1d4e9e
+Linen Closet|fbf8f3 ece5d8 d5c9b6 b3a691 857a69
+Jungle Gym|e63b2e f7931e ffd21f 3aa655 2b6cc4
+Smoke and Ember|151515 2e2a29 5c4f4a c2402f f2a024
+Orchid House|1d2b1f 3f6b4b d8e8d0 d9a3e0 8a3fa8
+Chalkboard|1f2b26 34453e f4f1e8 f2c9a0 e98a8a
+Copper Pot|0f2a2e 1f5f66 e8d8c3 c97b4a 7a3b1d
+Blue Hour|0b1030 1c2a6b 3f5fc0 f29f7c ffd8b8
+Matcha Latte|2e3b23 5f7a3c a3bf6d dfe8c2 f6efe2
+Grape Soda|1a0f2e 472a8c 8457e0 c7a6ff 5ef2d6
+Fog Harbor|e0e6e8 b3bfc4 7e8c8f 495a62 1d262c
+Poppy|fdf6ec f4d9c0 ee4b2b a81c1c 2a2a2a
+Lagoon|012a36 03506b 0892a5 79e0d0 f5fff8
+Sherbet|ffd6e0 ffefb0 c8f4d0 b8e2ff d9c8ff
+Midnight Diner|0d0d14 22223a c81d4a f7d046 e9f1f7
+Cedar and Sky|4a2c1a 8c5a36 d8c2a0 a7d3e8 2d6f9e
+Eucalyptus|26403a 4f7d70 9dc0b0 dbe9e0 f8faf6
+Marigold|3a2a00 a66a00 f2a900 ffd24d fff3c4
+Raspberry Beret|2a0a1a 7a1238 d81e5b f08fb0 fde6ee
+Slate and Lime|12181b 2a3940 5c7480 c6f432 f3ffe1
+Nord theme|2e3440 3b4252 88c0d0 a3be8c bf616a
+Solarized theme|002b36 268bd2 2aa198 b58900 dc322f fdf6e3
+Dracula theme|282a36 bd93f9 ff79c6 50fa7b f1fa8c
+Gruvbox theme|282828 cc241d d79921 98971a 458588 ebdbb2`
+  .split('\n').map(line => { const [name, c] = line.split('|'); return { name, colors: c.split(' ').map(x => '#' + x), curated: true }; });
+
+/* =====================================================================
+   Generator
+   ===================================================================== */
+let view = 'generate';
+let uid = 0;
+const nid = () => 'c' + (++uid);
+const S = { colors: [], mode: 'auto', tone: 'any', sim: 'none', hist: [], hi: -1 };
+let shadingIdx = -1;
+const MAXC = 10, MINC = 2;
+
+const palHexes = () => S.colors.map(c => c.hex);
+const palStr = () => S.colors.map(c => c.hex.slice(1)).join('-');
+const snap = () => S.colors.map(c => c.hex.slice(1) + (c.locked ? '!' : '')).join('-');
+function restore(s) {
+  S.colors = s.split('-').map(t => ({ id: nid(), hex: '#' + t.slice(0, 6), locked: t.endsWith('!') }));
+}
+// Record the current palette in history and redraw.
+function commit() {
+  shadingIdx = -1;
+  const s = snap();
+  if (S.hist[S.hi] !== s) {
+    S.hist.length = S.hi + 1;
+    S.hist.push(s);
+    if (S.hist.length > 300) S.hist.shift();
+    S.hi = S.hist.length - 1;
+  }
+  renderGen();
+  syncUrl();
+}
+function undo() { if (S.hi > 0) { restore(S.hist[--S.hi]); shadingIdx = -1; renderGen(); syncUrl(); } }
+function redo() { if (S.hi < S.hist.length - 1) { restore(S.hist[++S.hi]); shadingIdx = -1; renderGen(); syncUrl(); } }
+function setPalette(hexes) {
+  S.colors = hexes.slice(0, MAXC).map(hex => ({ id: nid(), hex, locked: false }));
+  commit();
+}
+function generate() {
+  const n = S.colors.length || 5;
+  const fixed = S.colors.map(c => (c.locked ? c.hex : null));
+  if (n && fixed.every(Boolean)) { toast('Every color is locked. Unlock one to generate.'); return; }
+  const hexes = genPalette(n, S.mode, Math.random, fixed, S.tone);
+  S.colors = hexes.map((hex, i) => ({ id: nid(), hex, locked: !!(S.colors[i] && S.colors[i].locked) }));
+  commit();
+}
+function addColor(at) {
+  if (S.colors.length >= MAXC) return;
+  let hex;
+  if (at != null && S.colors[at - 1] && S.colors[at]) hex = mix(S.colors[at - 1].hex, S.colors[at].hex, 0.5);
+  else {
+    const fixed = [...palHexes(), null];
+    hex = genPalette(fixed.length, S.mode, Math.random, fixed, S.tone).at(-1);
+    at = S.colors.length;
+  }
+  S.colors.splice(at, 0, { id: nid(), hex, locked: false });
+  commit();
+}
+function removeColor(i) {
+  if (S.colors.length <= MINC) return;
+  S.colors.splice(i, 1);
+  commit();
+}
+
+function renderGen() {
+  const wrap = $('#cols');
+  wrap.textContent = '';
+  const n = S.colors.length;
+  S.colors.forEach((c, i) => {
+    const shown = simulate(c.hex, S.sim), ink = textOn(shown);
+    const col = h('div', { class: 'col' + (c.locked ? ' locked' : ''), style: `background:${shown};color:${ink};order:${i}`, 'data-id': c.id });
+    if (shadingIdx === i) {
+      const [L, C, H] = hex2oklch(c.hex);
+      const steps = Array.from({ length: 19 }, (_, k) => 0.97 - k * 0.049);
+      const cur = steps.reduce((b, l, k) => (Math.abs(l - L) < Math.abs(steps[b] - L) ? k : b), 0);
+      const list = h('div', { class: 'shades', role: 'group', 'aria-label': 'Shades of ' + c.hex });
+      steps.forEach((l, k) => {
+        const hx = k === cur ? c.hex : oklch2hex(l, C, H), sh = simulate(hx, S.sim);
+        list.append(h('button', {
+          type: 'button', class: k === cur ? 'cur' : '', style: `background:${sh};color:${textOn(sh)}`,
+          'aria-label': 'Use ' + hx, onclick: () => { c.hex = hx; commit(); },
+        }, h('span', {}, hx.slice(1).toUpperCase())));
+      });
+      col.append(list);
+    } else {
+      const grip = ibtn('grip', 'Drag to reorder', null, 'grip');
+      grip.addEventListener('pointerdown', e => startDrag(e, c.id));
+      const rm = ibtn('x', 'Remove this color', () => removeColor(i));
+      rm.disabled = n <= MINC;
+      col.append(
+        h('div', { class: 'col-tools' },
+          rm,
+          ibtn('shades', 'Pick a lighter or darker shade', () => { shadingIdx = i; renderGen(); }),
+          ibtn('copy', 'Copy hex code', () => copy(c.hex.toUpperCase())),
+          grip,
+          ibtn(c.locked ? 'lock' : 'unlock', c.locked ? 'Unlock this color' : 'Lock this color', () => { c.locked = !c.locked; commit(); }, 'lock-btn'),
+        ),
+        h('div', { class: 'col-info' },
+          h('button', { class: 'hex', type: 'button', title: 'Edit this color', onclick: () => openEdit(i) }, c.hex.slice(1).toUpperCase()),
+          h('span', { class: 'cname' }, nameOf(c.hex)),
+        ),
+      );
+      if (i < n - 1 && n < MAXC) {
+        col.append(h('div', { class: 'col-edge' },
+          h('button', { type: 'button', 'aria-label': 'Add a color here', title: 'Add a color here', html: ic('plus'), onclick: () => addColor(i + 1) })));
+      }
+    }
+    wrap.append(col);
+  });
+  $('#countOut').textContent = n;
+  $('#lessBtn').disabled = n <= MINC;
+  $('#moreBtn').disabled = n >= MAXC;
+  $('#undoBtn').disabled = S.hi <= 0;
+  $('#redoBtn').disabled = S.hi >= S.hist.length - 1;
+  paintChrome();
+}
+// The logo and the active tab underline both wear the current palette.
+function paintChrome() {
+  const hexes = palHexes();
+  const strip = $('#brandStrip');
+  strip.textContent = '';
+  hexes.forEach(hex => strip.append(h('i', { style: 'background:' + hex })));
+  const stops = hexes.map((hex, i) => `${hex} ${i / hexes.length * 100}% ${(i + 1) / hexes.length * 100}%`).join(',');
+  document.documentElement.style.setProperty('--pal', `linear-gradient(90deg,${stops})`);
+}
+
+// Reordering uses CSS `order` while dragging so the column being dragged
+// stays in the DOM and keeps receiving pointer events.
+function startDrag(e, id) {
+  e.preventDefault();
+  const wrap = $('#cols'), cols = $$('.col', wrap), n = S.colors.length;
+  const vertical = getComputedStyle(wrap).flexDirection === 'column';
+  const rect = wrap.getBoundingClientRect();
+  const order = S.colors.map(c => c.id);
+  const me = cols.find(c => c.dataset.id === id);
+  me.classList.add('dragging'); wrap.classList.add('is-dragging');
+  const move = ev => {
+    const p = vertical ? (ev.clientY - rect.top) / rect.height : (ev.clientX - rect.left) / rect.width;
+    const to = clamp(Math.floor(p * n), 0, n - 1), from = order.indexOf(id);
+    if (to !== from) {
+      order.splice(from, 1); order.splice(to, 0, id);
+      cols.forEach(c => { c.style.order = order.indexOf(c.dataset.id); });
+    }
+  };
+  const up = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+    wrap.classList.remove('is-dragging');
+    S.colors = order.map(x => S.colors.find(c => c.id === x));
+    commit();
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
+}
+
+// ---------- dialogs ----------
+const dlg = $('#dlg');
+let dlgOnClose = null;
+function openDialog(title, body, { onClose, wide } = {}) {
+  $('#dlgTitle').textContent = title;
+  const b = $('#dlgBody');
+  b.textContent = '';
+  b.append(...[body].flat());
+  dlg.classList.toggle('wide', !!wide);
+  dlgOnClose = onClose || null;
+  dlg.showModal();
+}
+dlg.addEventListener('close', () => { const f = dlgOnClose; dlgOnClose = null; if (f) f(); });
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+$('#dlgClose').innerHTML = ic('x');
+$('#dlgClose').onclick = () => dlg.close();
+
+function slider(label, min, max, value) {
+  const input = h('input', { type: 'range', min, max, step: 1, value, 'aria-label': label });
+  const out = h('output', {}, String(value));
+  return { row: h('label', { class: 'slider' }, h('span', {}, label), input, out), input, out };
+}
+
+function openEdit(i) {
+  const c = S.colors[i];
+  if (!c) return;
+  let hsl = hex2hsl(c.hex);
+  const sw = h('div', { class: 'edit-swatch' });
+  const colorIn = h('input', { type: 'color', value: c.hex, 'aria-label': 'Color picker' });
+  const hexIn = h('input', { type: 'text', class: 'text-in', value: c.hex.toUpperCase(), maxlength: 7, spellcheck: 'false', 'aria-label': 'Hex code' });
+  const sh = slider('Hue', 0, 360, 0), ss = slider('Saturation', 0, 100, 0), sl = slider('Lightness', 0, 100, 0);
+  const readout = h('dl', { class: 'readout' });
+  const paint = src => {
+    const hex = c.hex, [r, g, b] = hex2rgb(hex), [L, C, H] = hex2oklch(hex);
+    sw.style.background = hex; sw.style.color = textOn(hex); sw.textContent = nameOf(hex);
+    if (src !== 'color') colorIn.value = hex;
+    if (src !== 'hex') hexIn.value = hex.toUpperCase();
+    sh.input.value = Math.round(hsl[0]); ss.input.value = Math.round(hsl[1] * 100); sl.input.value = Math.round(hsl[2] * 100);
+    sh.out.textContent = Math.round(hsl[0]) + '°'; ss.out.textContent = Math.round(hsl[1] * 100) + '%'; sl.out.textContent = Math.round(hsl[2] * 100) + '%';
+    const rows = [
+      ['HEX', hex.toUpperCase()],
+      ['RGB', `rgb(${r}, ${g}, ${b})`],
+      ['HSL', `hsl(${Math.round(hsl[0])} ${Math.round(hsl[1] * 100)}% ${Math.round(hsl[2] * 100)}%)`],
+      ['OKLCH', `oklch(${(L * 100).toFixed(1)}% ${C.toFixed(3)} ${H.toFixed(1)})`],
+    ];
+    readout.textContent = '';
+    rows.forEach(([k, v]) => readout.append(h('dt', {}, k), h('dd', {}, v), h('dd', {}, ibtn('copy', 'Copy ' + k, () => copy(v)))));
+    renderGen();
+  };
+  colorIn.addEventListener('input', () => { c.hex = colorIn.value.toLowerCase(); hsl = hex2hsl(c.hex); paint('color'); });
+  hexIn.addEventListener('input', () => { if (isHex(hexIn.value)) { c.hex = normHex(hexIn.value); hsl = hex2hsl(c.hex); paint('hex'); } });
+  const fromSliders = () => { hsl = [+sh.input.value, ss.input.value / 100, sl.input.value / 100]; c.hex = rgb2hex(hsl2rgb(hsl)); paint('sl'); };
+  [sh, ss, sl].forEach(s => s.input.addEventListener('input', fromSliders));
+  paint();
+  openDialog('Edit color', [
+    h('div', { class: 'edit-top' }, sw, h('div', { class: 'side' }, colorIn, hexIn)),
+    sh.row, ss.row, sl.row, readout,
+  ], { onClose: commit });
+}
+
+function openAdjust() {
+  const base = S.colors.map(c => c.hex);
+  let applied = false;
+  const sh = slider('Hue', -180, 180, 0), ss = slider('Saturation', -100, 100, 0), sb = slider('Brightness', -100, 100, 0), st = slider('Temperature', -100, 100, 0);
+  const all = [sh, ss, sb, st];
+  const apply = () => {
+    const [dh, ds, db, dt] = all.map(s => +s.input.value);
+    all.forEach(s => { s.out.textContent = (s.input.value > 0 ? '+' : '') + s.input.value; });
+    S.colors.forEach((c, i) => {
+      const [L, C, H] = hex2oklch(base[i]);
+      const warmed = hex2oklab(oklch2hex(clamp(L + db / 100 * 0.35), C * (1 + ds / 100), H + dh)).slice();
+      warmed[1] += 0.02 * dt / 100; warmed[2] += 0.06 * dt / 100;
+      c.hex = oklab2hex(warmed);
+    });
+    renderGen();
+  };
+  all.forEach(s => s.input.addEventListener('input', apply));
+  openDialog('Adjust the whole palette', [
+    h('p', {}, 'Shift every color together. The palette behind this window updates as you drag.'),
+    ...all.map(s => s.row),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn primary', type: 'button', onclick: () => { applied = true; dlg.close(); } }, 'Apply'),
+      h('button', { class: 'btn', type: 'button', onclick: () => dlg.close() }, 'Cancel')),
+  ], { onClose: () => { if (!applied) S.colors.forEach((c, i) => { c.hex = base[i]; }); commit(); } });
+}
+
+function openContrast() {
+  const hexes = palHexes();
+  let pass = 0, total = 0;
+  const table = h('table', { class: 'contrast' });
+  table.append(h('tr', {}, h('th', {}, 'Background'), hexes.map(t => h('th', {}, h('i', { style: 'background:' + t }), t.slice(1).toUpperCase()))));
+  hexes.forEach(bg => {
+    const tr = h('tr', {}, h('th', {}, h('i', { style: 'background:' + bg }), bg.slice(1).toUpperCase()));
+    hexes.forEach(fg => {
+      if (fg === bg) { tr.append(h('td', { class: 'self' })); return; }
+      const r = contrast(fg, bg); total++;
+      if (r >= 4.5) pass++;
+      const grade = r >= 7 ? 'AAA' : r >= 4.5 ? 'AA' : r >= 3 ? 'Large text' : 'Fails';
+      tr.append(h('td', { class: r < 3 ? 'fail' : '', style: `background:${bg};color:${fg}` }, h('b', {}, 'Aa'), h('small', {}, `${r.toFixed(2)} ${grade}`)));
+    });
+    table.append(tr);
+  });
+  openDialog('Contrast between your colors', [
+    h('p', {}, `${pass} of ${total} text and background pairs reach 4.5 to 1, the WCAG AA minimum for body text. Each cell shows the column color as text on the row color.`),
+    h('div', { class: 'scroll-x' }, table),
+    h('p', {}, 'AAA is 7 to 1 or more. Large text needs 3 to 1. Faded cells fall below that.'),
+  ], { wide: true });
+}
+
+// ---------- export ----------
+function slugs(hexes) {
+  const seen = {};
+  return hexes.map(hex => {
+    const base = nameOf(hex).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    seen[base] = (seen[base] || 0) + 1;
+    return seen[base] > 1 ? `${base}-${seen[base]}` : base;
+  });
+}
+function exportText(fmt, hexes) {
+  const names = slugs(hexes);
+  if (fmt === 'css') return `:root {\n${hexes.map((x, i) => `  --${names[i]}: ${x};`).join('\n')}\n}`;
+  if (fmt === 'scss') return hexes.map((x, i) => `$${names[i]}: ${x};`).join('\n');
+  if (fmt === 'tailwind') {
+    return `/* Tailwind v4: put this in your CSS */\n@theme {\n${hexes.map((x, i) => `  --color-${names[i]}: ${x};`).join('\n')}\n}\n\n` +
+      `// Tailwind v3: tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n${hexes.map((x, i) => `        '${names[i]}': '${x}',`).join('\n')}\n      },\n    },\n  },\n};`;
+  }
+  if (fmt === 'json') {
+    return JSON.stringify(hexes.map(hex => {
+      const [hh, s, l] = hex2hsl(hex);
+      return { name: nameOf(hex), hex, rgb: hex2rgb(hex), hsl: [Math.round(hh), Math.round(s * 100), Math.round(l * 100)] };
+    }), null, 2);
+  }
+  if (fmt === 'list') return `${hexes.join(', ')}\n\n${JSON.stringify(hexes)}\n\n${hexes.map(x => x.slice(1)).join('-')}`;
+  return shareUrl('#/generate/' + hexes.map(x => x.slice(1)).join('-'));
+}
+const shareUrl = hash => location.href.split('#')[0] + hash;
+
+function palettePng(hexes) {
+  const W = 1600, H = 900, c = h('canvas', { width: W, height: H }), x = c.getContext('2d'), w = W / hexes.length;
+  hexes.forEach((hex, i) => {
+    x.fillStyle = hex; x.fillRect(Math.floor(i * w), 0, Math.ceil(w) + 1, H);
+    x.fillStyle = textOn(hex); x.textAlign = 'center';
+    x.font = `600 ${Math.min(44, w / 5.2)}px system-ui, sans-serif`;
+    x.fillText(hex.slice(1).toUpperCase(), i * w + w / 2, H - 92);
+    x.globalAlpha = 0.78; x.font = `${Math.min(22, w / 9)}px system-ui, sans-serif`;
+    x.fillText(nameOf(hex), i * w + w / 2, H - 56, w - 12);
+    x.globalAlpha = 1;
+  });
+  c.toBlob(b => download(b, 'palette.png'));
+}
+function paletteSvg(hexes) {
+  const w = 240, H = 600;
+  const body = hexes.map((hex, i) =>
+    `<rect x="${i * w}" width="${w}" height="${H}" fill="${hex}"/>` +
+    `<text x="${i * w + w / 2}" y="${H - 48}" fill="${textOn(hex)}" font-family="system-ui, sans-serif" font-size="28" font-weight="600" text-anchor="middle">${hex.slice(1).toUpperCase()}</text>`).join('');
+  return new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${hexes.length * w} ${H}">${body}</svg>`], { type: 'image/svg+xml' });
+}
+// Adobe Swatch Exchange, for Photoshop, Illustrator and InDesign.
+function paletteAse(hexes) {
+  const blocks = hexes.map(hex => {
+    const nm = nameOf(hex) + '\0', len = 2 + nm.length * 2 + 4 + 12 + 2;
+    const v = new DataView(new ArrayBuffer(6 + len));
+    let o = 0;
+    v.setUint16(o, 1); o += 2; v.setUint32(o, len); o += 4; v.setUint16(o, nm.length); o += 2;
+    for (let i = 0; i < nm.length; i++) { v.setUint16(o, nm.charCodeAt(i)); o += 2; }
+    for (const ch of 'RGB ') v.setUint8(o++, ch.charCodeAt(0));
+    for (const ch of hex2rgb(hex)) { v.setFloat32(o, ch / 255); o += 4; }
+    v.setUint16(o, 2);
+    return v.buffer;
+  });
+  const head = new DataView(new ArrayBuffer(12));
+  [...'ASEF'].forEach((ch, i) => head.setUint8(i, ch.charCodeAt(0)));
+  head.setUint16(4, 1); head.setUint16(6, 0); head.setUint32(8, blocks.length);
+  return new Blob([head.buffer, ...blocks], { type: 'application/octet-stream' });
+}
+const paletteGpl = hexes => new Blob([
+  `GIMP Palette\nName: Hue Goes There palette\nColumns: ${hexes.length}\n#\n` +
+  hexes.map(hex => hex2rgb(hex).map(v => String(v).padStart(3)).join(' ') + '\t' + nameOf(hex)).join('\n') + '\n'], { type: 'text/plain' });
+
+function openExport(hexes = palHexes()) {
+  const tabs = [['css', 'CSS'], ['scss', 'SCSS'], ['tailwind', 'Tailwind'], ['json', 'JSON'], ['list', 'List'], ['url', 'Link']];
+  let fmt = 'css';
+  const code = h('pre', { class: 'code' });
+  const seg = h('div', { class: 'seg-ctl', role: 'group', 'aria-label': 'Format' });
+  const paint = () => {
+    code.textContent = exportText(fmt, hexes);
+    $$('button', seg).forEach(b => b.setAttribute('aria-pressed', b.dataset.v === fmt));
+  };
+  tabs.forEach(([v, label]) => seg.append(h('button', { type: 'button', 'data-v': v, onclick: () => { fmt = v; paint(); } }, label)));
+  paint();
+  openDialog('Export palette', [
+    h('div', { class: 'scroll-x' }, seg),
+    code,
+    h('div', { class: 'row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => copy(code.textContent, 'Copied') }, 'Copy')),
+    h('p', {}, 'Or download it as a file:'),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn', type: 'button', onclick: () => palettePng(hexes) }, 'PNG image'),
+      h('button', { class: 'btn', type: 'button', onclick: () => download(paletteSvg(hexes), 'palette.svg') }, 'SVG'),
+      h('button', { class: 'btn', type: 'button', onclick: () => download(paletteAse(hexes), 'palette.ase') }, 'ASE for Adobe apps'),
+      h('button', { class: 'btn', type: 'button', onclick: () => download(paletteGpl(hexes), 'palette.gpl') }, 'GPL for GIMP and Inkscape')),
+  ]);
+}
+
+// ---------- palette from an image ----------
+// Median cut: keep splitting the box of pixels with the widest color range.
+function quantize(pixels, n) {
+  let boxes = [pixels];
+  while (boxes.length < n) {
+    let bi = -1, best = 0, ch = 0;
+    boxes.forEach((b, i) => {
+      if (b.length < 2) return;
+      for (let c = 0; c < 3; c++) {
+        let mn = 255, mx = 0;
+        for (const p of b) { if (p[c] < mn) mn = p[c]; if (p[c] > mx) mx = p[c]; }
+        const score = (mx - mn) * Math.sqrt(b.length);
+        if (score > best) { best = score; bi = i; ch = c; }
+      }
+    });
+    if (bi < 0) break;
+    const b = boxes[bi].sort((p, q) => p[ch] - q[ch]), mid = b.length >> 1;
+    boxes.splice(bi, 1, b.slice(0, mid), b.slice(mid));
+  }
+  return boxes.map(b => rgb2hex([0, 1, 2].map(c => b.reduce((s, p) => s + p[c], 0) / b.length)));
+}
+async function paletteFromImage(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 160 / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * k)), hh = Math.max(1, Math.round(bmp.height * k));
+    const c = h('canvas', { width: w, height: hh }), x = c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(bmp, 0, 0, w, hh);
+    const d = x.getImageData(0, 0, w, hh).data, px = [];
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 127) px.push([d[i], d[i + 1], d[i + 2]]);
+    if (!px.length) throw new Error('empty');
+    const hexes = [...new Set(quantize(px, S.colors.length || 5))].sort((a, b) => luminance(a) - luminance(b));
+    if (hexes.length < MINC) hexes.push(mix(hexes[0], '#ffffff', 0.5));
+    setPalette(hexes);
+    toast('Palette pulled from your image');
+  } catch {
+    toast('That file could not be read as an image.');
+  }
+}
+
+// ---------- saving ----------
+const palKey = hexes => hexes.join('-');
+const isSaved = hexes => DB.palettes.some(p => palKey(p.colors) === palKey(hexes));
+function savePalette(hexes, name) {
+  if (isSaved(hexes)) { toast('Already in Saved'); return; }
+  DB.palettes.unshift({ id: newId(), name: name || autoName(hexes), colors: [...hexes], t: Date.now() });
+  persist(); paintSavedCount(); toast('Saved');
+}
+function unsavePalette(hexes) {
+  DB.palettes = DB.palettes.filter(p => palKey(p.colors) !== palKey(hexes));
+  persist(); paintSavedCount(); toast('Removed from Saved');
+}
+function paintSavedCount() {
+  const n = DB.palettes.length + DB.gradients.length;
+  $('#savedCount').textContent = n ? String(n) : '';
+}
+
+// ---------- generator toolbar ----------
+$('#undoBtn').innerHTML = ic('undo'); $('#redoBtn').innerHTML = ic('redo');
+$('#genBtn').onclick = generate;
+$('#undoBtn').onclick = undo;
+$('#redoBtn').onclick = redo;
+$('#modeSel').onchange = e => { S.mode = e.target.value; generate(); };
+$('#toneSel').onchange = e => { S.tone = e.target.value; generate(); };
+$('#simSel').onchange = e => { S.sim = e.target.value; renderGen(); };
+$('#lessBtn').onclick = () => {
+  let i = S.colors.length - 1;
+  while (i > 0 && S.colors[i].locked) i--; // prefer dropping an unlocked color
+  removeColor(S.colors[i].locked ? S.colors.length - 1 : i);
+};
+$('#moreBtn').onclick = () => addColor();
+$('#adjustBtn').onclick = openAdjust;
+$('#contrastBtn').onclick = openContrast;
+$('#exportBtn').onclick = () => openExport();
+$('#saveBtn').onclick = () => savePalette(palHexes());
+$('#imageBtn').onclick = () => $('#imageIn').click();
+$('#imageIn').onchange = e => { const f = e.target.files[0]; if (f) paletteFromImage(f); e.target.value = ''; };
+
+/* =====================================================================
+   Gradient maker
+   ===================================================================== */
+const G = { type: 'linear', angle: 90, space: 'oklab', stops: [], sel: null };
+let gSteps = 5;
+const PRESETS = `Dusk|linear|135|1a1b4b 6b3fa0 f2789f fbc98a
+Daybreak|linear|120|f97b5a fbbf77 fdf0b0
+Deep End|linear|160|0b1a4a 1466a8 2bd9c0
+Orchid|linear|45|5a2ea6 c04cc9 ff9ecb
+Lime Soda|linear|90|0f8a5f 8fe04a f6ff8a
+Ember|linear|0|2b0a0a c2261a ff9d2e
+Polar|linear|180|e8f1ff b5cdf5 7b9be8
+Mint Fog|linear|135|e9fbf3 a8e6cf 56c5a0
+Peach Fuzz|linear|90|ffe3d3 ffb3a0 ff7a8a
+Plasma|linear|60|1b0f8f a11fc4 ff3d6e ffb23e
+Seaweed|linear|200|06281f 136f4f 9bd67a
+Cotton Candy|linear|90|a8d8ff f3c4ff ffc4dc
+Gold Leaf|linear|135|6b4a00 d9a514 fff1a8
+Northern Lights|linear|100|05162b 0e6b6b 3be0a0 a56bff
+Spotlight|radial|0|fff3c4 f2a900 3a2a00
+Color Wheel|conic|0|ff5d8f ffd23f 5fb86b 4f8df5 b96dff ff5d8f`
+  .split('\n').map(line => {
+    const [name, type, angle, c] = line.split('|'), hx = c.split(' ');
+    return { name, g: { type, angle: +angle, space: 'oklab', stops: hx.map((x, i) => ({ hex: '#' + x, pos: Math.round(i / (hx.length - 1) * 100) })) } };
+  });
+
+const sortedStops = g => [...g.stops].sort((a, b) => a.pos - b.pos);
+function gradCss(g = G, flat = false) {
+  const st = sortedStops(g).map(s => `${s.hex} ${+(+s.pos).toFixed(1)}%`).join(', ');
+  const sp = g.space === 'srgb' ? '' : ' in ' + g.space;
+  if (flat) return `linear-gradient(90deg${sp}, ${st})`;
+  if (g.type === 'radial') return `radial-gradient(circle${sp}, ${st})`;
+  if (g.type === 'conic') return `conic-gradient(from ${g.angle}deg${sp}, ${st})`;
+  return `linear-gradient(${g.angle}deg${sp}, ${st})`;
+}
+function gradAt(g, p) {
+  const st = sortedStops(g);
+  if (p <= st[0].pos) return st[0].hex;
+  if (p >= st.at(-1).pos) return st.at(-1).hex;
+  for (let i = 0; i < st.length - 1; i++) {
+    const a = st[i], b = st[i + 1];
+    if (p <= b.pos) return b.pos === a.pos ? b.hex : mix(a.hex, b.hex, (p - a.pos) / (b.pos - a.pos), g.space);
+  }
+  return st.at(-1).hex;
+}
+const gradStr = (g = G) => `${g.type}-${Math.round(g.angle)}-${g.space}/` + sortedStops(g).map(s => `${s.hex.slice(1)}:${+(+s.pos).toFixed(1)}`).join('-');
+function parseGrad(str) {
+  const [head = '', body = ''] = str.split('/'), [type, angle, space] = head.split('-');
+  const stops = body.split('-').map(t => {
+    const [hx, pos] = t.split(':');
+    return /^[0-9a-f]{6}$/i.test(hx || '') ? { hex: '#' + hx.toLowerCase(), pos: clamp(parseFloat(pos) || 0, 0, 100) } : null;
+  }).filter(Boolean).slice(0, 12);
+  if (stops.length < 2) return null;
+  return {
+    type: ['linear', 'radial', 'conic'].includes(type) ? type : 'linear',
+    angle: clamp(parseInt(angle, 10) || 0, 0, 360),
+    space: ['oklab', 'oklch', 'srgb', 'hsl'].includes(space) ? space : 'oklab',
+    stops,
+  };
+}
+function loadGrad(g) {
+  G.type = g.type; G.angle = g.angle; G.space = g.space;
+  G.stops = g.stops.map(s => ({ id: nid(), hex: s.hex, pos: s.pos }));
+  G.sel = G.stops[0].id;
+  buildGradUI();
+}
+function randomGrad() {
+  const n = Math.random() < 0.65 ? 2 : 3, h0 = Math.random() * 360, jump = (30 + Math.random() * 70) * (Math.random() < 0.5 ? -1 : 1);
+  const dark = Math.random() < 0.4, C = 0.1 + Math.random() * 0.12;
+  const L0 = dark ? 0.25 + Math.random() * 0.2 : 0.6 + Math.random() * 0.15, L1 = dark ? 0.7 + Math.random() * 0.2 : 0.85 + Math.random() * 0.1;
+  G.stops = Array.from({ length: n }, (_, i) => {
+    const t = i / (n - 1);
+    return { id: nid(), hex: oklch2hex(lerp(L0, L1, t), C * (0.8 + Math.random() * 0.5), (h0 + jump * t + 360) % 360), pos: Math.round(t * 100) };
+  });
+  if (G.type !== 'radial') G.angle = Math.round(Math.random() * 24) * 15;
+  G.sel = G.stops[0].id;
+  buildGradUI();
+}
+
+const gBar = $('#gBar');
+function selectStop(id) {
+  G.sel = id;
+  $$('.handle', gBar).forEach(n => n.classList.toggle('sel', n.dataset.id === id));
+  $$('.stop-row').forEach(n => n.classList.toggle('sel', n.dataset.id === id));
+}
+// Rebuild handles and rows. Only called when stops are added, removed or
+// reordered, so dragging and typing never lose focus mid-gesture.
+function buildGradUI() {
+  $$('.handle', gBar).forEach(n => n.remove());
+  const rows = $('#gStops');
+  rows.textContent = '';
+  for (const s of sortedStops(G)) {
+    const hd = h('button', { class: 'handle', type: 'button', 'data-id': s.id });
+    hd.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      selectStop(s.id); hd.focus();
+      hd.setPointerCapture(e.pointerId);
+      const rect = gBar.getBoundingClientRect();
+      const move = ev => { s.pos = Math.round(clamp((ev.clientX - rect.left) / rect.width) * 100); paintGrad(); };
+      const up = () => { hd.removeEventListener('pointermove', move); buildGradUI(); };
+      hd.addEventListener('pointermove', move);
+      hd.addEventListener('pointerup', up, { once: true });
+      hd.addEventListener('pointercancel', up, { once: true });
+    });
+    hd.addEventListener('focus', () => selectStop(s.id));
+    hd.addEventListener('keydown', e => {
+      const step = e.shiftKey ? 10 : 1;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault(); s.pos = clamp(s.pos + (e.key === 'ArrowLeft' ? -step : step), 0, 100); paintGrad();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeStop(s.id); }
+    });
+    gBar.append(hd);
+
+    const colorIn = h('input', { type: 'color', value: s.hex, 'aria-label': 'Stop color' });
+    const hexIn = h('input', { type: 'text', class: 'text-in hex-in', value: s.hex.toUpperCase(), maxlength: 7, spellcheck: 'false', 'aria-label': 'Stop hex code' });
+    const posIn = h('input', { type: 'number', class: 'text-in pos-in', min: 0, max: 100, value: s.pos, 'aria-label': 'Stop position in percent' });
+    colorIn.addEventListener('input', () => { s.hex = colorIn.value.toLowerCase(); paintGrad(); });
+    hexIn.addEventListener('input', () => { if (isHex(hexIn.value)) { s.hex = normHex(hexIn.value); paintGrad(); } });
+    posIn.addEventListener('input', () => { s.pos = clamp(parseFloat(posIn.value) || 0, 0, 100); paintGrad(); });
+    posIn.addEventListener('change', buildGradUI);
+    const del = ibtn('trash', 'Remove this color', () => removeStop(s.id));
+    del.disabled = G.stops.length <= 2;
+    const row = h('div', { class: 'stop-row', 'data-id': s.id }, colorIn, hexIn, posIn, h('span', { class: 'unit' }, '%'), del);
+    row.addEventListener('focusin', () => selectStop(s.id));
+    rows.append(row);
+  }
+  selectStop(G.sel);
+  paintGrad();
+}
+function paintGrad() {
+  $('#gradPreview').style.background = gradCss();
+  gBar.style.background = gradCss(G, true);
+  for (const s of G.stops) {
+    const hd = $(`.handle[data-id="${s.id}"]`, gBar), row = $(`.stop-row[data-id="${s.id}"]`);
+    if (hd) { hd.style.left = s.pos + '%'; hd.style.background = s.hex; hd.setAttribute('aria-label', `${s.hex.toUpperCase()} at ${Math.round(s.pos)} percent. Arrow keys move it.`); }
+    if (row) {
+      const [colorIn, hexIn, posIn] = $$('input', row);
+      colorIn.value = s.hex;
+      if (document.activeElement !== hexIn) hexIn.value = s.hex.toUpperCase();
+      if (document.activeElement !== posIn) posIn.value = Math.round(s.pos);
+    }
+  }
+  $$('#gType button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === G.type));
+  const radial = G.type === 'radial';
+  $('#gAngle').disabled = $('#gAngleNum').disabled = radial;
+  $('#gAngle').value = G.angle;
+  if (document.activeElement !== $('#gAngleNum')) $('#gAngleNum').value = G.angle;
+  $('#gAngleLabel').textContent = radial ? 'Angle (not used by radial gradients)' : G.type === 'conic' ? 'Starting angle' : 'Angle';
+  $('#gSpace').value = G.space;
+  $('#gCode').textContent = `background: ${sortedStops(G)[0].hex};\nbackground: ${gradCss()};`;
+  $('#gStepOut').textContent = gSteps;
+  syncUrl();
+}
+function addStop(pos) {
+  if (G.stops.length >= 12) { toast('A gradient can hold up to 12 colors.'); return; }
+  if (pos == null) { // drop it in the widest gap
+    const st = sortedStops(G);
+    let gap = 0; pos = 50;
+    for (let i = 0; i < st.length - 1; i++) if (st[i + 1].pos - st[i].pos > gap) { gap = st[i + 1].pos - st[i].pos; pos = (st[i].pos + st[i + 1].pos) / 2; }
+  }
+  const s = { id: nid(), hex: gradAt(G, pos), pos: Math.round(pos) };
+  G.stops.push(s); G.sel = s.id;
+  buildGradUI();
+}
+function removeStop(id) {
+  if (G.stops.length <= 2) return;
+  G.stops = G.stops.filter(s => s.id !== id);
+  G.sel = G.stops[0].id;
+  buildGradUI();
+}
+function gradCanvas(g, W, H) {
+  const c = h('canvas', { width: W, height: H }), x = c.getContext('2d'), cx = W / 2, cy = H / 2;
+  let gr;
+  if (g.type === 'radial') gr = x.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(cx, cy));
+  else if (g.type === 'conic') gr = x.createConicGradient((g.angle - 90) * Math.PI / 180, cx, cy);
+  else {
+    const a = g.angle * Math.PI / 180, dx = Math.sin(a), dy = -Math.cos(a), len = Math.abs(W * dx) + Math.abs(H * dy);
+    gr = x.createLinearGradient(cx - dx * len / 2, cy - dy * len / 2, cx + dx * len / 2, cy + dy * len / 2);
+  }
+  // Canvas only blends in sRGB, so sample our own blend densely instead.
+  for (let i = 0; i <= 96; i++) gr.addColorStop(i / 96, gradAt(g, i / 96 * 100));
+  x.fillStyle = gr; x.fillRect(0, 0, W, H);
+  return c;
+}
+
+gBar.addEventListener('pointerdown', e => {
+  if (e.target !== gBar) return;
+  const rect = gBar.getBoundingClientRect();
+  addStop(clamp((e.clientX - rect.left) / rect.width) * 100);
+});
+$$('#gType button').forEach(b => { b.onclick = () => { G.type = b.dataset.v; paintGrad(); }; });
+$('#gAngle').oninput = e => { G.angle = +e.target.value; paintGrad(); };
+$('#gAngleNum').oninput = e => { G.angle = clamp(parseInt(e.target.value, 10) || 0, 0, 360); paintGrad(); };
+$('#gSpace').onchange = e => { G.space = e.target.value; paintGrad(); };
+$('#gRandom').onclick = randomGrad;
+$('#gAdd').onclick = () => addStop();
+$('#gReverse').onclick = () => { G.stops.forEach(s => { s.pos = 100 - s.pos; }); buildGradUI(); };
+$('#gEven').onclick = () => { const st = sortedStops(G); st.forEach((s, i) => { s.pos = Math.round(i / (st.length - 1) * 100); }); buildGradUI(); };
+$('#gFromPal').onclick = () => {
+  const hx = palHexes();
+  G.stops = hx.map((hex, i) => ({ id: nid(), hex, pos: Math.round(i / (hx.length - 1) * 100) }));
+  G.sel = G.stops[0].id; buildGradUI();
+};
+$('#gCopy').onclick = () => copy($('#gCode').textContent, 'Copied CSS');
+$('#gLink').onclick = () => copy(shareUrl('#/gradient/' + gradStr()), 'Copied link');
+$('#gPng').onclick = () => gradCanvas(G, 1920, 1080).toBlob(b => download(b, 'gradient.png'));
+$('#gStepLess').onclick = () => { gSteps = Math.max(2, gSteps - 1); paintGrad(); };
+$('#gStepMore').onclick = () => { gSteps = Math.min(MAXC, gSteps + 1); paintGrad(); };
+$('#gToPal').onclick = () => {
+  const st = sortedStops(G), a = st[0].pos, b = st.at(-1).pos;
+  const hexes = Array.from({ length: gSteps }, (_, i) => gradAt(G, lerp(a, b, i / (gSteps - 1))));
+  location.hash = '#/generate/' + hexes.map(x => x.slice(1)).join('-');
+};
+$('#gSave').onclick = () => {
+  const key = gradStr();
+  if (DB.gradients.some(x => gradStr(x.g) === key)) { toast('Already in Saved'); return; }
+  const g = { type: G.type, angle: G.angle, space: G.space, stops: sortedStops(G).map(s => ({ hex: s.hex, pos: s.pos })) };
+  DB.gradients.unshift({ id: newId(), name: autoName(g.stops.map(s => s.hex)), g, t: Date.now() });
+  persist(); paintSavedCount(); toast('Saved');
+};
+PRESETS.forEach(p => $('#gPresets').append(
+  h('button', { type: 'button', onclick: () => loadGrad(p.g) }, h('i', { style: 'background:' + gradCss(p.g) }), p.name)));
+
+/* =====================================================================
+   Explorer
+   ===================================================================== */
+const FAMS = [['red', '#e03c3c'], ['orange', '#f08a1c'], ['yellow', '#f4cf3a'], ['green', '#3fa34d'], ['teal', '#1aa6a6'], ['blue', '#2f6fde'],
+  ['purple', '#7b4bd1'], ['pink', '#ec5fa0'], ['brown', '#8a5a36'], ['grey', '#8d8d8d'], ['black', '#141414'], ['white', '#ffffff']];
+const STYLES = ['warm', 'cool', 'pastel', 'vivid', 'muted', 'dark', 'light', 'monochrome', 'earthy', 'high contrast'];
+const any = (t, ...f) => f.some(x => t.fams.has(x)), sty = (t, s) => t.styles.has(s);
+// Topic words that are not a color or a style still mean something visual.
+const TOPICS = {
+  sunset: t => sty(t, 'warm') && any(t, 'orange', 'pink') , sunrise: t => sty(t, 'warm') && sty(t, 'light'),
+  ocean: t => any(t, 'blue', 'teal') && sty(t, 'cool'), sea: t => any(t, 'blue', 'teal') && sty(t, 'cool'), beach: t => any(t, 'teal', 'blue') && any(t, 'yellow', 'orange', 'white'),
+  forest: t => any(t, 'green') && !sty(t, 'light'), nature: t => any(t, 'green'), jungle: t => any(t, 'green') && sty(t, 'vivid'),
+  earth: t => sty(t, 'earthy'), desert: t => sty(t, 'warm') && any(t, 'brown', 'orange') && !sty(t, 'vivid'),
+  retro: t => sty(t, 'warm') && !sty(t, 'vivid') && !sty(t, 'pastel'), vintage: t => sty(t, 'muted') || (sty(t, 'warm') && any(t, 'brown')),
+  neon: t => sty(t, 'vivid') && any(t, 'black', 'pink', 'purple'), cyberpunk: t => sty(t, 'vivid') && any(t, 'pink', 'purple') && any(t, 'blue', 'teal', 'black'),
+  spring: t => any(t, 'green', 'pink') && sty(t, 'light'), summer: t => sty(t, 'vivid') && sty(t, 'warm'),
+  autumn: t => sty(t, 'warm') && any(t, 'orange', 'brown'), fall: t => sty(t, 'warm') && any(t, 'orange', 'brown'), winter: t => sty(t, 'cool') && any(t, 'white', 'grey', 'blue'),
+  night: t => sty(t, 'dark'), candy: t => any(t, 'pink') && (sty(t, 'pastel') || sty(t, 'vivid')), coffee: t => any(t, 'brown'),
+  wedding: t => sty(t, 'light') && !sty(t, 'vivid'), halloween: t => any(t, 'orange') && any(t, 'black', 'purple'),
+  christmas: t => any(t, 'red') && any(t, 'green'), gold: t => any(t, 'yellow') && any(t, 'brown', 'orange', 'black'),
+  minimal: t => sty(t, 'muted') || sty(t, 'monochrome'), mono: t => sty(t, 'monochrome'), bright: t => sty(t, 'vivid'),
+};
+const E = { q: '', qHex: null, words: [], fams: new Set(), styles: new Set(), size: 0, tone: 'any', k: 0, shown: 0, done: false };
+
+function exMatches(p) {
+  const t = tagsOf(p.colors);
+  if (E.size && p.colors.length !== E.size) return false;
+  for (const f of E.fams) if (!t.fams.has(f)) return false;
+  for (const s of E.styles) if (!t.styles.has(s)) return false;
+  if (E.qHex) return p.built || p.colors.some(c => dist(c, E.qHex) < 0.07);
+  if (E.words.length) {
+    const hay = `${p.name} ${[...t.fams].join(' ')} ${[...t.styles].join(' ')} ${p.colors.map(nameOf).join(' ')}`.toLowerCase();
+    return E.words.every(w => {
+      if (w === 'gray') w = 'grey';
+      // "dark" should mean a dark palette, not one that happens to contain Dark Orange.
+      if (STYLES.includes(w)) return t.styles.has(w);
+      if (NOUN[w]) return t.fams.has(w);
+      return hay.includes(w) || (TOPICS[w] && TOPICS[w](t));
+    });
+  }
+  return true;
+}
+// Generated palettes are seeded by their number, so the same number always
+// gives the same palette on every visit and every machine.
+function exGenerate(k) {
+  const rnd = mulberry32(k * 7919 + 13);
+  const r = rnd(), n = E.size || (r < 0.14 ? 4 : r < 0.26 ? 6 : 5);
+  let fixed = null;
+  if (E.qHex) { fixed = Array(n).fill(null); fixed[Math.floor(rnd() * n)] = E.qHex; }
+  const colors = genPalette(n, 'auto', rnd, fixed, E.tone);
+  return { name: autoName(colors), colors, built: !!E.qHex };
+}
+function palCard(p, { editable } = {}) {
+  const strip = h('div', { class: 'strip' }, p.colors.map(hex =>
+    h('button', { class: 'seg', type: 'button', style: `background:${hex};color:${textOn(hex)}`, title: 'Copy ' + hex.toUpperCase(), 'aria-label': 'Copy ' + hex.toUpperCase(), onclick: () => copy(hex.toUpperCase()) },
+      h('span', {}, hex.slice(1).toUpperCase()))));
+  const path = p.colors.map(x => x.slice(1)).join('-');
+  const heart = ibtn('heart', 'Save this palette', () => {
+    isSaved(p.colors) ? unsavePalette(p.colors) : savePalette(p.colors, p.name);
+    paintHeart();
+    if (view === 'saved') renderSaved();
+  });
+  const paintHeart = () => {
+    const on = isSaved(p.colors);
+    heart.setAttribute('aria-pressed', on);
+    heart.title = on ? 'Remove from Saved' : 'Save this palette';
+    heart.setAttribute('aria-label', heart.title);
+  };
+  paintHeart();
+  let title;
+  if (editable) {
+    title = h('input', { class: 'name-in', type: 'text', value: p.name, maxlength: 60, 'aria-label': 'Palette name' });
+    title.addEventListener('change', () => { p.name = title.value.trim() || autoName(p.colors); title.value = p.name; persist(); });
+  } else {
+    const st = [...tagsOf(p.colors).styles].slice(0, 2).join(', ');
+    title = [h('div', { class: 'card-name' }, p.name), h('div', { class: 'card-sub' }, st || `${p.colors.length} colors`)];
+  }
+  return h('article', { class: 'card' }, strip,
+    h('div', { class: 'card-meta' },
+      h('div', { class: 'card-text' }, title),
+      h('a', { class: 'btn', href: '#/generate/' + path }, 'Open'),
+      ibtn('gradient', 'Make a gradient from this palette', () => {
+        location.hash = '#/gradient/linear-90-oklab/' + p.colors.map((x, i) => `${x.slice(1)}:${Math.round(i / (p.colors.length - 1) * 100)}`).join('-');
+      }),
+      heart));
+}
+function exReset() {
+  E.q = $('#exQ').value.trim();
+  E.qHex = isHex(E.q) ? normHex(E.q) : null;
+  E.words = E.qHex ? [] : E.q.toLowerCase().split(/[\s,]+/).filter(Boolean);
+  E.size = +$('#exSize').value;
+  // If a mood is asked for, generate in that mood instead of hoping to hit it.
+  E.tone = ['pastel', 'vivid', 'muted', 'dark', 'light'].find(t => E.styles.has(t) || E.words.includes(t)) || 'any';
+  E.k = 0; E.shown = 0; E.done = false;
+  const grid = $('#exGrid');
+  grid.textContent = '';
+  $('#exNote').hidden = true;
+  let picks = CURATED.filter(exMatches);
+  if (E.qHex) picks = picks.sort((a, b) => Math.min(...a.colors.map(c => dist(c, E.qHex))) - Math.min(...b.colors.map(c => dist(c, E.qHex))));
+  picks.forEach(p => grid.append(palCard(p)));
+  E.shown = picks.length;
+  exPump();
+  syncUrl();
+}
+function exFill() {
+  const grid = $('#exGrid'), frag = document.createDocumentFragment();
+  let added = 0, tries = 0;
+  while (added < 24 && tries < 2500) {
+    tries++;
+    const p = exGenerate(++E.k);
+    if (exMatches(p)) { frag.append(palCard(p)); added++; }
+  }
+  grid.append(frag);
+  E.shown += added;
+  if (added < 24) {
+    E.done = true;
+    const note = $('#exNote');
+    note.hidden = false;
+    note.textContent = E.shown
+      ? 'That is everything matching these filters. Remove one to see more.'
+      : `Nothing matches${E.q ? ` "${E.q}"` : ' those filters together'}. Try a color like teal, a mood like pastel or sunset, or a hex code.`;
+  }
+}
+function exPump() {
+  let guard = 0;
+  while (view === 'explore' && !E.done && guard++ < 8 && $('#exSentinel').getBoundingClientRect().top < innerHeight + 700) exFill();
+}
+window.addEventListener('scroll', exPump, { passive: true });
+window.addEventListener('resize', exPump);
+let exTimer;
+$('#exQ').addEventListener('input', () => { clearTimeout(exTimer); exTimer = setTimeout(exReset, 220); });
+$('#exSize').onchange = exReset;
+function chip(label, set, value, dot) {
+  const b = h('button', { class: 'chip', type: 'button', 'aria-pressed': 'false' }, dot && h('i', { style: 'background:' + dot }), label);
+  b.onclick = () => { set.has(value) ? set.delete(value) : set.add(value); b.setAttribute('aria-pressed', set.has(value)); exReset(); };
+  return b;
+}
+FAMS.forEach(([f, dot]) => $('#exFams').append(chip(f, E.fams, f, dot)));
+STYLES.forEach(s => $('#exStyles').append(chip(s, E.styles, s)));
+['sunset', 'ocean', 'forest', 'neon', 'vintage', 'coffee'].forEach(w =>
+  $('#exStyles').append(h('button', { class: 'chip plain', type: 'button', onclick: () => { $('#exQ').value = w; exReset(); } }, w)));
+$('#exploreLede').textContent = `${CURATED.length} hand-picked palettes first, then an endless supply generated as you scroll. Click any color to copy it.`;
+
+/* =====================================================================
+   Saved
+   ===================================================================== */
+function renderSaved() {
+  const body = $('#savedBody');
+  body.textContent = '';
+  if (!DB.palettes.length && !DB.gradients.length) {
+    body.append(h('p', { class: 'note' }, 'Nothing saved yet. Press Save on a palette or gradient, or the heart on anything in Explore, and it lands here.'));
+    return;
+  }
+  if (DB.palettes.length) {
+    body.append(h('h2', {}, `Palettes (${DB.palettes.length})`), h('div', { class: 'grid' }, DB.palettes.map(p => palCard(p, { editable: true }))));
+  }
+  if (DB.gradients.length) {
+    body.append(h('h2', {}, `Gradients (${DB.gradients.length})`), h('div', { class: 'grid' }, DB.gradients.map(x => {
+      const name = h('input', { class: 'name-in', type: 'text', value: x.name, maxlength: 60, 'aria-label': 'Gradient name' });
+      name.addEventListener('change', () => { x.name = name.value.trim() || 'Gradient'; name.value = x.name; persist(); });
+      return h('article', { class: 'card' },
+        h('a', { class: 'tile', href: '#/gradient/' + gradStr(x.g), style: 'background:' + gradCss(x.g), 'aria-label': 'Open ' + x.name }),
+        h('div', { class: 'card-meta' },
+          h('div', { class: 'card-text' }, name),
+          h('a', { class: 'btn', href: '#/gradient/' + gradStr(x.g) }, 'Open'),
+          ibtn('copy', 'Copy CSS', () => copy(`background: ${gradCss(x.g)};`, 'Copied CSS')),
+          ibtn('trash', 'Delete this gradient', () => { DB.gradients = DB.gradients.filter(y => y !== x); persist(); paintSavedCount(); renderSaved(); toast('Removed from Saved'); })));
+    })));
+  }
+}
+$('#backupBtn').onclick = () =>
+  download(new Blob([JSON.stringify({ app: 'hue-goes-there', version: 1, palettes: DB.palettes, gradients: DB.gradients }, null, 2)], { type: 'application/json' }), 'hue-goes-there-backup.json');
+$('#restoreBtn').onclick = () => $('#restoreIn').click();
+$('#restoreIn').onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const cleanName = s => String(s || '').slice(0, 60);
+    let added = 0;
+    for (const p of data.palettes || []) {
+      const colors = (p.colors || []).filter(isHex).map(normHex).slice(0, MAXC);
+      if (colors.length >= MINC && !isSaved(colors)) { DB.palettes.push({ id: newId(), name: cleanName(p.name) || autoName(colors), colors, t: Date.now() }); added++; }
+    }
+    for (const x of data.gradients || []) {
+      const g = x.g && parseGrad(gradStr({ type: x.g.type, angle: +x.g.angle || 0, space: x.g.space, stops: (x.g.stops || []).filter(s => s && isHex(s.hex)).map(s => ({ hex: normHex(s.hex), pos: +s.pos || 0 })) }));
+      if (g && !DB.gradients.some(y => gradStr(y.g) === gradStr(g))) { DB.gradients.push({ id: newId(), name: cleanName(x.name) || 'Gradient', g, t: Date.now() }); added++; }
+    }
+    persist(); paintSavedCount(); renderSaved();
+    toast(added ? `Restored ${added} item${added === 1 ? '' : 's'}` : 'Everything in that backup is already here');
+  } catch {
+    toast('That file is not a Hue Goes There backup.');
+  }
+};
+
+/* =====================================================================
+   Routing, theme, keyboard
+   ===================================================================== */
+const VIEWS = ['generate', 'gradient', 'explore', 'saved'];
+const TITLES = { generate: 'Palettes', gradient: 'Gradients', explore: 'Explore', saved: 'Saved' };
+function currentHash() {
+  if (view === 'generate') return '#/generate/' + palStr();
+  if (view === 'gradient') return '#/gradient/' + gradStr();
+  if (view === 'explore') return '#/explore' + (E.q ? '/' + encodeURIComponent(E.q) : '');
+  return '#/saved';
+}
+// Debounced: browsers throttle history writes, and sliders fire fast.
+let urlTimer;
+function syncUrl() {
+  clearTimeout(urlTimer);
+  urlTimer = setTimeout(() => {
+    try { if (location.hash !== currentHash()) history.replaceState(null, '', currentHash()); } catch {}
+    $('.tabs [data-tab="generate"]').href = '#/generate/' + palStr();
+    if (G.stops.length) $('.tabs [data-tab="gradient"]').href = '#/gradient/' + gradStr();
+  }, 160);
+}
+function show(v) {
+  view = v;
+  VIEWS.forEach(x => { $('#view-' + x).hidden = x !== v; });
+  $$('.tabs a').forEach(a => { a.dataset.tab === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
+  document.title = `${TITLES[v]} | Hue Goes There`;
+  if (v === 'generate') renderGen();
+  if (v === 'gradient') buildGradUI();
+  if (v === 'explore') { $('#exQ').value = E.q; exReset(); }
+  if (v === 'saved') renderSaved();
+  window.scrollTo(0, 0);
+  syncUrl();
+}
+function route() {
+  const parts = location.hash.replace(/^#\/?/, '').split('/');
+  const v = VIEWS.includes(parts[0]) ? parts[0] : 'generate';
+  if (v === 'generate' && parts[1]) {
+    const hx = parts[1].split('-').filter(x => /^[0-9a-f]{6}$/i.test(x)).slice(0, MAXC).map(x => '#' + x.toLowerCase());
+    if (hx.length >= MINC && hx.join() !== palHexes().join()) setPalette(hx);
+  }
+  if (v === 'gradient' && parts[1]) {
+    const g = parseGrad(parts.slice(1).join('/'));
+    if (g && gradStr(g) !== (G.stops.length ? gradStr() : '')) loadGrad(g);
+  }
+  if (v === 'explore') { try { E.q = decodeURIComponent(parts[1] || ''); } catch { E.q = ''; } }
+  show(v);
+}
+window.addEventListener('hashchange', route);
+
+function applyTheme() {
+  const dark = DB.theme ? DB.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  $('#themeBtn').innerHTML = ic(dark ? 'sun' : 'moon');
+}
+$('#themeBtn').onclick = () => {
+  DB.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  persist(); applyTheme();
+};
+
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  const typing = t.matches && t.matches('input, textarea, select, [contenteditable]');
+  if (dlg.open) return;
+  if (e.code === 'Space' && !typing && (view === 'generate' || view === 'gradient')) {
+    // A button reached with the keyboard keeps its normal Space behavior.
+    if (t.matches && t.matches('button, a') && t.matches(':focus-visible')) return;
+    e.preventDefault();
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    view === 'generate' ? generate() : randomGrad();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing && view === 'generate') {
+    e.preventDefault();
+    e.shiftKey ? redo() : undo();
+  } else if (e.key === 'Escape' && shadingIdx >= 0) {
+    shadingIdx = -1; renderGen();
+  }
+});
+
+// ---------- start ----------
+applyTheme();
+paintSavedCount();
+setPalette(CURATED[Math.floor(Math.random() * 60)].colors);
+loadGrad(PRESETS[0].g);
+route();
+S.hist = [snap()]; S.hi = 0;
+renderGen();
+</script>
+</body>
+</html>
