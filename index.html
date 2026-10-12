@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Ang Pallate Mo!: free palette and gradient generator</title>
+<title>Ang Palette Mo!: free palette and gradient generator</title>
 <meta name="description" content="Generate color palettes and gradients, explore an endless supply of palettes, and export everything. Free, no account, nothing locked.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='11' height='32' fill='%231d4e89'/%3E%3Crect x='11' width='10' height='32' fill='%23f2b705'/%3E%3Crect x='21' width='11' height='32' fill='%23d92b1e'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -311,9 +311,9 @@ table.contrast td.self { background: none; }
 <body>
 
 <header class="top">
-  <a class="brand" href="#/generate" aria-label="Ang Pallate Mo! home">
+  <a class="brand" href="#/generate" aria-label="Ang Palette Mo! home">
     <span class="brand-strip" id="brandStrip" aria-hidden="true"></span>
-    <span class="brand-name">Ang Pallate Mo!</span>
+    <span class="brand-name">Ang Palette Mo!</span>
   </a>
   <nav class="tabs" aria-label="Sections">
     <a href="#/generate" data-tab="generate">Palettes</a>
@@ -491,7 +491,7 @@ table.contrast td.self { background: none; }
 </dialog>
 
 <div id="toast" role="status" aria-live="polite"></div>
-<noscript><p style="padding:24px">Ang Pallate Mo! needs JavaScript to generate colors.</p></noscript>
+<noscript><p style="padding:24px">Ang Palette Mo! needs JavaScript to generate colors.</p></noscript>
 
 <script>
 'use strict';
@@ -1303,7 +1303,7 @@ function paletteAse(hexes) {
   return new Blob([head.buffer, ...blocks], { type: 'application/octet-stream' });
 }
 const paletteGpl = hexes => new Blob([
-  `GIMP Palette\nName: Ang Pallate Mo! palette\nColumns: ${hexes.length}\n#\n` +
+  `GIMP Palette\nName: Ang Palette Mo! palette\nColumns: ${hexes.length}\n#\n` +
   hexes.map(hex => hex2rgb(hex).map(v => String(v).padStart(3)).join(' ') + '\t' + nameOf(hex)).join('\n') + '\n'], { type: 'text/plain' });
 
 function openExport(hexes = palHexes()) {
@@ -1823,7 +1823,7 @@ $('#restoreIn').onchange = async e => {
     persist(); paintSavedCount(); renderSaved();
     toast(added ? `Restored ${added} item${added === 1 ? '' : 's'}` : 'Everything in that backup is already here');
   } catch {
-    toast('That file is not a Ang Pallate Mo! backup.');
+    toast('That file is not a Ang Palette Mo! backup.');
   }
 };
 
@@ -1852,7 +1852,7 @@ function show(v) {
   view = v;
   VIEWS.forEach(x => { $('#view-' + x).hidden = x !== v; });
   $$('.tabs a').forEach(a => { a.dataset.tab === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
-  document.title = `${TITLES[v]} | Ang Pallate Mo!`;
+  document.title = `${TITLES[v]} | Ang Palette Mo!`;
   if (v === 'generate') renderGen();
   if (v === 'gradient') buildGradUI();
   if (v === 'explore') { $('#exQ').value = E.q; exReset(); }
